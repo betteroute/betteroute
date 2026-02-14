@@ -1,0 +1,7 @@
+$schema: "../cache/schemas/tasks.json"
+
+inheritedBy:
+  toolchains: ["go"]
+
+taskOptions:
+  envFile: true

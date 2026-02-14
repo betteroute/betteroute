@@ -1,6 +1,13 @@
-projects: ["packages/*"]
+$schema: "./cache/schemas/workspace.json"
+
+projects:
+  - "apps/*"
+  - "packages/*"
 
 vcs:
   defaultBranch: "main"
   provider: "github"
-
+  hooks:
+    pre-commit:
+      - "moon run :lint :format --affected --status=staged"
+  sync: true
