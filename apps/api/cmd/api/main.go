@@ -20,6 +20,7 @@ import (
 
 	"github.com/execrc/betteroute/internal/config"
 	"github.com/execrc/betteroute/internal/docs"
+	"github.com/execrc/betteroute/internal/errs"
 	"github.com/execrc/betteroute/internal/health"
 	"github.com/execrc/betteroute/internal/openapi"
 )
@@ -58,6 +59,7 @@ func run() error {
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
+		ErrorHandler: errs.Handler(logger),
 	})
 
 	app.Use(recover.New())
