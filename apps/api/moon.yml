@@ -1,0 +1,66 @@
+$schema: "../../.moon/cache/schemas/project.json"
+
+language: go
+stack: backend
+
+project:
+  name: "api"
+  description: "Betteroute API server"
+
+fileGroups:
+  sources:
+    - "cmd/**/*"
+    - "internal/**/*"
+    - "go.mod"
+    - "go.sum"
+  tests:
+    - "internal/**/*_test.go"
+
+tasks:
+  # Development
+  dev:
+    command: "air"
+    options:
+      cache: false
+      persistent: true
+
+  # Build
+  build:
+    script: "go build -ldflags \"-X ${LDFLAGS_VERSION}\" -o bin/api ./cmd/api"
+    inputs:
+      - "@group(sources)"
+    outputs:
+      - "bin/api"
+    env:
+      LDFLAGS_VERSION: "github.com/execrc/betteroute/internal/config.Version=${VERSION:-dev}"
+
+  # Testing
+  test:
+    command: "go test -race -cover ./..."
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+
+  # Linting
+  lint:
+    command: "go tool golangci-lint run"
+    inputs:
+      - "@group(sources)"
+
+  # Docs
+  docs:
+    command: "go tool swag init -g cmd/api/main.go -o internal/openapi --outputTypes json"
+    inputs:
+      - "@group(sources)"
+    outputs:
+      - "internal/openapi/swagger.json"
+
+  check:
+    deps:
+      - "lint"
+      - "test"
+
+  tidy:
+    command: "go mod tidy"
+    options:
+      cache: false

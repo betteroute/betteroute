@@ -1,0 +1,16 @@
+[build]
+  cmd = "go build -o ./tmp/api ./cmd/api"
+  entrypoint = "./tmp/api"
+  include_ext = ["go", "toml", "yaml"]
+  exclude_dir = ["tmp", "bin", "vendor"]
+  exclude_regex = ["_test\\.go"]
+  delay = 1000
+  kill_delay = "3s"
+  send_interrupt = true
+  log = "build-errors.log"
+
+[misc]
+  clean_on_exit = true
+
+[screen]
+  clear_on_rebuild = true

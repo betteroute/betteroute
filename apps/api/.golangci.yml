@@ -1,0 +1,98 @@
+version: "2"
+
+run:
+  timeout: 5m
+
+formatters:
+  enable:
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/execrc/betteroute
+
+linters:
+  default: none
+  enable:
+    # Bug detection
+    - errcheck       # unchecked errors
+    - errorlint      # Go 1.13+ error wrapping
+    - nilerr         # nil error returns
+    - bodyclose      # HTTP response body leaks
+    - noctx          # missing context in HTTP/DB
+    - rowserrcheck   # unchecked rows.Err()
+    - sqlclosecheck  # unclosed SQL connections
+
+    # Static analysis
+    - govet          # go vet
+    - staticcheck    # comprehensive static analysis
+    - unused         # unused code
+
+    # Security
+    - gosec          # security issues
+
+    # Modern Go
+    - modernize      # modern Go patterns
+    - intrange       # Go 1.22+ range over int
+    - sloglint       # slog best practices
+    - nolintlint     # valid //nolint directives
+
+    # Style
+    - misspell       # typos
+    - unconvert      # unnecessary conversions
+    - revive         # configurable linter
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+
+  gosec:
+    excludes:
+      - G104  # errcheck handles this
+
+  govet:
+    enable-all: true
+    disable:
+      - fieldalignment  # micro-optimization
+
+  sloglint:
+    context: scope
+    static-msg: true
+
+  staticcheck:
+    checks:
+      - all
+
+  nolintlint:
+    require-explanation: true
+    require-specific: true
+
+  revive:
+    rules:
+      - name: blank-imports
+      - name: context-as-argument
+      - name: error-return
+      - name: error-naming
+      - name: increment-decrement
+      - name: var-declaration
+      - name: range
+      - name: receiver-naming
+      - name: indent-error-flow
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+
+exclusions:
+  presets:
+    - std-error-handling
+    - common-false-positives
+  paths:
+    - "**/sqlc/**"
+    - "**/mocks/**"
+  rules:
+    - path: '_test\.go'
+      linters:
+        - bodyclose
+        - errcheck
+        - gosec
+        - noctx

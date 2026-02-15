@@ -1,0 +1,9 @@
+# Build output
+/tmp/
+/bin/
+
+# Environment
+.env
+
+# Air
+build-errors.log

@@ -7,7 +7,7 @@ javascript:
   packageManager: "pnpm"
 
 node:
-  version: "25.2.1"
+  version: "25.6.1"
 
 pnpm:
   version: "10.29.3"
