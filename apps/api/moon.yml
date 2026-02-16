@@ -13,9 +13,10 @@ fileGroups:
     - "internal/**/*"
     - "go.mod"
     - "go.sum"
-  sql:
-    - "sql/schema/**/*"
-    - "sql/queries/**/*"
+  schema:
+    - "sql/schema/**/*.sql"
+  queries:
+    - "sql/queries/**/*.sql"
   tests:
     - "internal/**/*_test.go"
 
@@ -64,8 +65,40 @@ tasks:
     options:
       cache: false
     inputs:
-      - "@group(sql)"
+      - "@group(schema)"
+      - "@group(queries)"
       - "sql/sqlc.yaml"
+
+  # Database
+  db-diff:
+    command: "atlas migrate diff --env dev"
+    inputs:
+      - "@group(schema)"
+      - "sql/atlas.hcl"
+    options:
+      cache: false
+
+  db-apply:
+    command: "atlas migrate apply --env dev"
+    options:
+      cache: false
+
+  db-status:
+    command: "atlas migrate status --env dev"
+    options:
+      cache: false
+
+  db-hash:
+    command: "atlas migrate hash --env dev"
+    inputs:
+      - "sql/migrations/*"
+    options:
+      cache: false
+
+  db-seed:
+    script: "for f in sql/seeds/*.sql; do psql ${DATABASE_URL} -f \"$f\"; done"
+    options:
+      cache: false
 
   check:
     deps:
