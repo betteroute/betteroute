@@ -13,6 +13,9 @@ fileGroups:
     - "internal/**/*"
     - "go.mod"
     - "go.sum"
+  sql:
+    - "sql/schema/**/*"
+    - "sql/queries/**/*"
   tests:
     - "internal/**/*_test.go"
 
@@ -55,6 +58,15 @@ tasks:
     outputs:
       - "internal/openapi/swagger.json"
 
+  # SQL code generation
+  sqlc:
+    command: "go tool sqlc generate"
+    options:
+      cache: false
+    inputs:
+      - "@group(sql)"
+      - "sql/sqlc.yaml"
+
   check:
     deps:
       - "lint"
@@ -64,3 +76,4 @@ tasks:
     command: "go mod tidy"
     options:
       cache: false
+

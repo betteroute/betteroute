@@ -16,8 +16,9 @@ var Version = "dev"
 
 // Config holds application-level settings parsed from environment variables.
 type Config struct {
-	Env  string `env:"APP_ENV" envDefault:"development"`
-	Port int    `env:"PORT"    envDefault:"8080"`
+	Env         string `env:"APP_ENV"       envDefault:"development"`
+	Port        int    `env:"PORT"          envDefault:"8080"`
+	DatabaseURL string `env:"DATABASE_URL"  envDefault:"postgres://localhost:5432/betteroute?sslmode=disable"`
 }
 
 // Load parses environment variables into Config and validates the result.

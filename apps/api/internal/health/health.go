@@ -4,17 +4,25 @@
 package health
 
 import (
+	"context"
+
 	"github.com/gofiber/fiber/v3"
 )
+
+// Pinger checks the health of a dependency (e.g. database).
+type Pinger interface {
+	Ping(ctx context.Context) error
+}
 
 // Handler serves health-check endpoints.
 type Handler struct {
 	version string
+	db      Pinger
 }
 
 // New creates a Handler that reports the given build version.
-func New(version string) *Handler {
-	return &Handler{version: version}
+func New(version string, db Pinger) *Handler {
+	return &Handler{version: version, db: db}
 }
 
 // Register mounts health-check routes on the given app.
@@ -28,6 +36,11 @@ func (h *Handler) liveness(c fiber.Ctx) error {
 }
 
 func (h *Handler) readiness(c fiber.Ctx) error {
-	// TODO: check DB, Redis, etc. once wired.
+	if err := h.db.Ping(c.Context()); err != nil {
+		return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"status": "unavailable",
+			"error":  "database unreachable",
+		})
+	}
 	return c.JSON(fiber.Map{"status": "ok"})
 }

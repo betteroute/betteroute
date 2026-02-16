@@ -1,0 +1,38 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "schema"
+    queries: "queries"
+    gen:
+      go:
+        package: "sqlc"
+        out: "../internal/sqlc"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_pointers_for_null_types: true
+        emit_enum_valid_method: true
+        emit_all_enum_values: true
+        overrides:
+          # Numeric/Decimal as string (prevents float precision issues for money)
+          - db_type: "numeric"
+            go_type: "string"
+          - db_type: "decimal"
+            go_type: "string"
+
+          # JSONB as json.RawMessage (flexible, parse in app layer)
+          - db_type: "jsonb"
+            go_type: "encoding/json.RawMessage"
+
+          # Use time.Time for timestamps
+          - db_type: "timestamptz"
+            nullable: true
+            go_type:
+              import: "time"
+              type: "Time"
+              pointer: true
+          - db_type: "timestamptz"
+            nullable: false
+            go_type:
+              import: "time"
+              type: "Time"

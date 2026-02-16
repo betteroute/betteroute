@@ -17,8 +17,10 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/recover"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/execrc/betteroute/internal/config"
+	"github.com/execrc/betteroute/internal/db"
 	"github.com/execrc/betteroute/internal/docs"
 	"github.com/execrc/betteroute/internal/errs"
 	"github.com/execrc/betteroute/internal/health"
@@ -53,6 +55,16 @@ func run() error {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 
+	// Database.
+	ctx := context.Background()
+	pool, err := db.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("connecting to database: %w", err)
+	}
+	defer pool.Close()
+
+	logger.Info("database connected")
+
 	// Fiber app.
 	app := fiber.New(fiber.Config{
 		AppName:      "betteroute-api",
@@ -64,14 +76,14 @@ func run() error {
 
 	app.Use(recover.New())
 
-	registerRoutes(app, cfg, logger)
+	registerRoutes(app, cfg, logger, pool)
 
 	return serve(app, cfg, logger)
 }
 
 // registerRoutes wires all handler packages to the Fiber app.
-func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger) {
-	health.New(config.Version).Register(app)
+func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, pool *pgxpool.Pool) {
+	health.New(config.Version, pool).Register(app)
 
 	if cfg.IsDevelopment() {
 		docs.Register(app, openapi.Spec)
