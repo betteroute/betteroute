@@ -388,15 +388,66 @@
                     "type": "string",
                     "maxLength": 2048
                 },
+                "expiration_url": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
                 "expires_at": {
                     "type": "string"
+                },
+                "max_clicks": {
+                    "description": "Click limits",
+                    "type": "integer"
+                },
+                "notes": {
+                    "description": "Internal",
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "og_description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "og_image": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
+                "og_title": {
+                    "description": "OG metadata overrides",
+                    "type": "string",
+                    "maxLength": 200
                 },
                 "short_code": {
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 1
                 },
+                "starts_at": {
+                    "description": "Scheduling",
+                    "type": "string"
+                },
                 "title": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_campaign": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_content": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_medium": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_source": {
+                    "description": "UTM parameters",
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_term": {
                     "type": "string",
                     "maxLength": 200
                 },
@@ -409,15 +460,23 @@
             "type": "object",
             "properties": {
                 "click_count": {
+                    "description": "Analytics (denormalized)",
                     "type": "integer"
                 },
                 "created_at": {
+                    "description": "Timestamps",
+                    "type": "string"
+                },
+                "created_via": {
                     "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
                 "dest_url": {
+                    "type": "string"
+                },
+                "expiration_url": {
                     "type": "string"
                 },
                 "expires_at": {
@@ -427,9 +486,28 @@
                     "type": "string"
                 },
                 "is_active": {
+                    "description": "Status \u0026 Scheduling",
                     "type": "boolean"
                 },
                 "last_clicked_at": {
+                    "type": "string"
+                },
+                "max_clicks": {
+                    "description": "Click limits",
+                    "type": "integer"
+                },
+                "notes": {
+                    "description": "Internal",
+                    "type": "string"
+                },
+                "og_description": {
+                    "type": "string"
+                },
+                "og_image": {
+                    "type": "string"
+                },
+                "og_title": {
+                    "description": "OG metadata overrides",
                     "type": "string"
                 },
                 "short_code": {
@@ -438,10 +516,32 @@
                 "short_url": {
                     "type": "string"
                 },
+                "starts_at": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 },
+                "unique_click_count": {
+                    "type": "integer"
+                },
                 "updated_at": {
+                    "type": "string"
+                },
+                "utm_campaign": {
+                    "type": "string"
+                },
+                "utm_content": {
+                    "type": "string"
+                },
+                "utm_medium": {
+                    "type": "string"
+                },
+                "utm_source": {
+                    "description": "UTM parameters",
+                    "type": "string"
+                },
+                "utm_term": {
                     "type": "string"
                 },
                 "workspace_id": {
@@ -460,13 +560,64 @@
                     "type": "string",
                     "maxLength": 2048
                 },
+                "expiration_url": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
                 "expires_at": {
                     "type": "string"
                 },
                 "is_active": {
                     "type": "boolean"
                 },
+                "max_clicks": {
+                    "description": "Click limits",
+                    "type": "integer"
+                },
+                "notes": {
+                    "description": "Internal",
+                    "type": "string",
+                    "maxLength": 5000
+                },
+                "og_description": {
+                    "type": "string",
+                    "maxLength": 500
+                },
+                "og_image": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
+                "og_title": {
+                    "description": "OG metadata overrides",
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "starts_at": {
+                    "description": "Scheduling",
+                    "type": "string"
+                },
                 "title": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_campaign": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_content": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_medium": {
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_source": {
+                    "description": "UTM parameters",
+                    "type": "string",
+                    "maxLength": 200
+                },
+                "utm_term": {
                     "type": "string",
                     "maxLength": 200
                 }

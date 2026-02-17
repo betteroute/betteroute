@@ -153,7 +153,11 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	l, err := h.svc.Update(c.Context(), c.Params("id"), wsID, input, fields.Has("expires_at"))
+	l, err := h.svc.Update(c.Context(), c.Params("id"), wsID, input, NullableFields{
+		StartsAt:  fields.Has("starts_at"),
+		ExpiresAt: fields.Has("expires_at"),
+		MaxClicks: fields.Has("max_clicks"),
+	})
 	if err != nil {
 		return h.mapError(err)
 	}

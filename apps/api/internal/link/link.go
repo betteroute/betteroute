@@ -12,41 +12,113 @@ import (
 
 // Link represents a shortened URL belonging to a workspace.
 type Link struct {
-	ID          string     `json:"id"`
-	WorkspaceID string     `json:"workspace_id"`
-	ShortCode   string     `json:"short_code"`
-	ShortURL    string     `json:"short_url"`
-	DestURL     string     `json:"dest_url"`
-	Title       string     `json:"title,omitempty"`
-	Description string     `json:"description,omitempty"`
-	IsActive    bool       `json:"is_active"`
-	ClickCount  int64      `json:"click_count"`
-	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
-	LastClicked *time.Time `json:"last_clicked_at,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
-	UpdatedAt   time.Time  `json:"updated_at"`
+	ID          string `json:"id"`
+	WorkspaceID string `json:"workspace_id"`
+	ShortCode   string `json:"short_code"`
+	ShortURL    string `json:"short_url"`
+	DestURL     string `json:"dest_url"`
+	Title       string `json:"title,omitempty"`
+	Description string `json:"description,omitempty"`
+
+	// Status & Scheduling
+	IsActive      bool       `json:"is_active"`
+	StartsAt      *time.Time `json:"starts_at,omitempty"`
+	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
+	ExpirationURL string     `json:"expiration_url,omitempty"`
+
+	// Click limits
+	MaxClicks *int32 `json:"max_clicks,omitempty"`
+
+	// UTM parameters
+	UTMSource   string `json:"utm_source,omitempty"`
+	UTMMedium   string `json:"utm_medium,omitempty"`
+	UTMCampaign string `json:"utm_campaign,omitempty"`
+	UTMTerm     string `json:"utm_term,omitempty"`
+	UTMContent  string `json:"utm_content,omitempty"`
+
+	// OG metadata overrides
+	OGTitle       string `json:"og_title,omitempty"`
+	OGDescription string `json:"og_description,omitempty"`
+	OGImage       string `json:"og_image,omitempty"`
+
+	// Analytics (denormalized)
+	ClickCount       int64      `json:"click_count"`
+	UniqueClickCount int64      `json:"unique_click_count"`
+	LastClicked      *time.Time `json:"last_clicked_at,omitempty"`
+
+	// Internal
+	Notes      string `json:"notes,omitempty"`
+	CreatedVia string `json:"created_via"`
+
+	// Timestamps
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // Input types.
 
 // CreateInput is the input for creating a new link.
 type CreateInput struct {
-	WorkspaceID string     `json:"workspace_id" validate:"required"`
-	DestURL     string     `json:"dest_url"     validate:"required,url,max=2048"`
-	ShortCode   string     `json:"short_code"   validate:"omitempty,min=1,max=50"`
-	Title       string     `json:"title"        validate:"omitempty,max=200"`
-	Description string     `json:"description"  validate:"omitempty,max=500"`
-	ExpiresAt   *time.Time `json:"expires_at"   validate:"omitempty"`
+	WorkspaceID string `json:"workspace_id" validate:"required"`
+	DestURL     string `json:"dest_url"     validate:"required,url,max=2048"`
+	ShortCode   string `json:"short_code"   validate:"omitempty,min=1,max=50"`
+	Title       string `json:"title"        validate:"omitempty,max=200"`
+	Description string `json:"description"  validate:"omitempty,max=500"`
+
+	// Scheduling
+	StartsAt      *time.Time `json:"starts_at"       validate:"omitempty"`
+	ExpiresAt     *time.Time `json:"expires_at"      validate:"omitempty"`
+	ExpirationURL string     `json:"expiration_url"  validate:"omitempty,url,max=2048"`
+
+	// Click limits
+	MaxClicks *int32 `json:"max_clicks" validate:"omitempty,gt=0"`
+
+	// UTM parameters
+	UTMSource   string `json:"utm_source"   validate:"omitempty,max=200"`
+	UTMMedium   string `json:"utm_medium"   validate:"omitempty,max=200"`
+	UTMCampaign string `json:"utm_campaign" validate:"omitempty,max=200"`
+	UTMTerm     string `json:"utm_term"     validate:"omitempty,max=200"`
+	UTMContent  string `json:"utm_content"  validate:"omitempty,max=200"`
+
+	// OG metadata overrides
+	OGTitle       string `json:"og_title"       validate:"omitempty,max=200"`
+	OGDescription string `json:"og_description" validate:"omitempty,max=500"`
+	OGImage       string `json:"og_image"       validate:"omitempty,url,max=2048"`
+
+	// Internal
+	Notes string `json:"notes" validate:"omitempty,max=5000"`
 }
 
 // UpdateInput is the input for updating an existing link.
 // Use patch.Bind[UpdateInput] to parse and track field presence.
 type UpdateInput struct {
-	DestURL     *string    `json:"dest_url"     validate:"omitempty,url,max=2048"`
-	Title       *string    `json:"title"        validate:"omitempty,max=200"`
-	Description *string    `json:"description"  validate:"omitempty,max=500"`
-	IsActive    *bool      `json:"is_active"`
-	ExpiresAt   *time.Time `json:"expires_at"`
+	DestURL     *string `json:"dest_url"     validate:"omitempty,url,max=2048"`
+	Title       *string `json:"title"        validate:"omitempty,max=200"`
+	Description *string `json:"description"  validate:"omitempty,max=500"`
+	IsActive    *bool   `json:"is_active"`
+
+	// Scheduling
+	StartsAt      *time.Time `json:"starts_at"`
+	ExpiresAt     *time.Time `json:"expires_at"`
+	ExpirationURL *string    `json:"expiration_url" validate:"omitempty,url,max=2048"`
+
+	// Click limits
+	MaxClicks *int32 `json:"max_clicks" validate:"omitempty,gt=0"`
+
+	// UTM parameters
+	UTMSource   *string `json:"utm_source"   validate:"omitempty,max=200"`
+	UTMMedium   *string `json:"utm_medium"   validate:"omitempty,max=200"`
+	UTMCampaign *string `json:"utm_campaign" validate:"omitempty,max=200"`
+	UTMTerm     *string `json:"utm_term"     validate:"omitempty,max=200"`
+	UTMContent  *string `json:"utm_content"  validate:"omitempty,max=200"`
+
+	// OG metadata overrides
+	OGTitle       *string `json:"og_title"       validate:"omitempty,max=200"`
+	OGDescription *string `json:"og_description" validate:"omitempty,max=500"`
+	OGImage       *string `json:"og_image"       validate:"omitempty,url,max=2048"`
+
+	// Internal
+	Notes *string `json:"notes" validate:"omitempty,max=5000"`
 }
 
 // Sentinel errors.

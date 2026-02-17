@@ -13,12 +13,19 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
+// NullableFields tracks which nullable fields should be explicitly set (vs ignored).
+type NullableFields struct {
+	StartsAt  bool
+	ExpiresAt bool
+	MaxClicks bool
+}
+
 // Storer defines the interface for link storage operations.
 type Storer interface {
 	Insert(ctx context.Context, l *Link) (*Link, error)
 	FindByID(ctx context.Context, id, workspaceID string) (*Link, error)
 	List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, int, error)
-	Update(ctx context.Context, id, workspaceID string, input UpdateInput, setExpiry bool) (*Link, error)
+	Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error)
 	SoftDelete(ctx context.Context, id, workspaceID string) error
 }
 
@@ -34,13 +41,26 @@ func NewStore(pool *pgxpool.Pool) *Store {
 
 func (s *Store) Insert(ctx context.Context, l *Link) (*Link, error) {
 	row, err := s.q.InsertLink(ctx, sqlc.InsertLinkParams{
-		ID:          l.ID,
-		WorkspaceID: l.WorkspaceID,
-		ShortCode:   l.ShortCode,
-		DestUrl:     l.DestURL,
-		Title:       ptr.ToNonZero(l.Title),
-		Description: ptr.ToNonZero(l.Description),
-		ExpiresAt:   l.ExpiresAt,
+		ID:            l.ID,
+		WorkspaceID:   l.WorkspaceID,
+		ShortCode:     l.ShortCode,
+		DestUrl:       l.DestURL,
+		Title:         ptr.ToNonZero(l.Title),
+		Description:   ptr.ToNonZero(l.Description),
+		StartsAt:      l.StartsAt,
+		ExpiresAt:     l.ExpiresAt,
+		ExpirationUrl: ptr.ToNonZero(l.ExpirationURL),
+		MaxClicks:     l.MaxClicks,
+		UtmSource:     ptr.ToNonZero(l.UTMSource),
+		UtmMedium:     ptr.ToNonZero(l.UTMMedium),
+		UtmCampaign:   ptr.ToNonZero(l.UTMCampaign),
+		UtmTerm:       ptr.ToNonZero(l.UTMTerm),
+		UtmContent:    ptr.ToNonZero(l.UTMContent),
+		OgTitle:       ptr.ToNonZero(l.OGTitle),
+		OgDescription: ptr.ToNonZero(l.OGDescription),
+		OgImage:       ptr.ToNonZero(l.OGImage),
+		Notes:         ptr.ToNonZero(l.Notes),
+		CreatedVia:    l.CreatedVia,
 	})
 	if err != nil {
 		if db.IsUniqueViolation(err) {
@@ -88,16 +108,30 @@ func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int)
 	return links, int(total), nil
 }
 
-func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput, setExpiry bool) (*Link, error) {
+func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error) {
 	row, err := s.q.UpdateLink(ctx, sqlc.UpdateLinkParams{
-		ID:           id,
-		WorkspaceID:  workspaceID,
-		DestUrl:      input.DestURL,
-		Title:        input.Title,
-		Description:  input.Description,
-		IsActive:     input.IsActive,
-		SetExpiresAt: setExpiry,
-		ExpiresAt:    input.ExpiresAt,
+		ID:            id,
+		WorkspaceID:   workspaceID,
+		DestUrl:       input.DestURL,
+		Title:         input.Title,
+		Description:   input.Description,
+		IsActive:      input.IsActive,
+		SetStartsAt:   nulls.StartsAt,
+		StartsAt:      input.StartsAt,
+		SetExpiresAt:  nulls.ExpiresAt,
+		ExpiresAt:     input.ExpiresAt,
+		ExpirationUrl: input.ExpirationURL,
+		SetMaxClicks:  nulls.MaxClicks,
+		MaxClicks:     input.MaxClicks,
+		UtmSource:     input.UTMSource,
+		UtmMedium:     input.UTMMedium,
+		UtmCampaign:   input.UTMCampaign,
+		UtmTerm:       input.UTMTerm,
+		UtmContent:    input.UTMContent,
+		OgTitle:       input.OGTitle,
+		OgDescription: input.OGDescription,
+		OgImage:       input.OGImage,
+		Notes:         input.Notes,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -125,17 +159,31 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 // toLink maps a sqlc.Link to a domain Link.
 func toLink(row sqlc.Link) *Link {
 	return &Link{
-		ID:          row.ID,
-		WorkspaceID: row.WorkspaceID,
-		ShortCode:   row.ShortCode,
-		DestURL:     row.DestUrl,
-		Title:       ptr.From(row.Title),
-		Description: ptr.From(row.Description),
-		IsActive:    row.IsActive,
-		ClickCount:  row.ClickCount,
-		ExpiresAt:   row.ExpiresAt,
-		LastClicked: row.LastClickedAt,
-		CreatedAt:   row.CreatedAt,
-		UpdatedAt:   row.UpdatedAt,
+		ID:               row.ID,
+		WorkspaceID:      row.WorkspaceID,
+		ShortCode:        row.ShortCode,
+		DestURL:          row.DestUrl,
+		Title:            ptr.From(row.Title),
+		Description:      ptr.From(row.Description),
+		IsActive:         row.IsActive,
+		StartsAt:         row.StartsAt,
+		ExpiresAt:        row.ExpiresAt,
+		ExpirationURL:    ptr.From(row.ExpirationUrl),
+		MaxClicks:        row.MaxClicks,
+		UTMSource:        ptr.From(row.UtmSource),
+		UTMMedium:        ptr.From(row.UtmMedium),
+		UTMCampaign:      ptr.From(row.UtmCampaign),
+		UTMTerm:          ptr.From(row.UtmTerm),
+		UTMContent:       ptr.From(row.UtmContent),
+		OGTitle:          ptr.From(row.OgTitle),
+		OGDescription:    ptr.From(row.OgDescription),
+		OGImage:          ptr.From(row.OgImage),
+		ClickCount:       row.ClickCount,
+		UniqueClickCount: row.UniqueClickCount,
+		LastClicked:      row.LastClickedAt,
+		Notes:            ptr.From(row.Notes),
+		CreatedVia:       row.CreatedVia,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
 	}
 }

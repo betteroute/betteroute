@@ -9,19 +9,33 @@ import (
 )
 
 type Link struct {
-	ID            string     `json:"id"`
-	WorkspaceID   string     `json:"workspace_id"`
-	ShortCode     string     `json:"short_code"`
-	DestUrl       string     `json:"dest_url"`
-	Title         *string    `json:"title"`
-	Description   *string    `json:"description"`
-	IsActive      bool       `json:"is_active"`
-	ExpiresAt     *time.Time `json:"expires_at"`
-	ClickCount    int64      `json:"click_count"`
-	LastClickedAt *time.Time `json:"last_clicked_at"`
-	DeletedAt     *time.Time `json:"deleted_at"`
-	CreatedAt     time.Time  `json:"created_at"`
-	UpdatedAt     time.Time  `json:"updated_at"`
+	ID               string     `json:"id"`
+	WorkspaceID      string     `json:"workspace_id"`
+	ShortCode        string     `json:"short_code"`
+	DestUrl          string     `json:"dest_url"`
+	Title            *string    `json:"title"`
+	Description      *string    `json:"description"`
+	IsActive         bool       `json:"is_active"`
+	StartsAt         *time.Time `json:"starts_at"`
+	ExpiresAt        *time.Time `json:"expires_at"`
+	ExpirationUrl    *string    `json:"expiration_url"`
+	MaxClicks        *int32     `json:"max_clicks"`
+	UtmSource        *string    `json:"utm_source"`
+	UtmMedium        *string    `json:"utm_medium"`
+	UtmCampaign      *string    `json:"utm_campaign"`
+	UtmTerm          *string    `json:"utm_term"`
+	UtmContent       *string    `json:"utm_content"`
+	OgTitle          *string    `json:"og_title"`
+	OgDescription    *string    `json:"og_description"`
+	OgImage          *string    `json:"og_image"`
+	ClickCount       int64      `json:"click_count"`
+	UniqueClickCount int64      `json:"unique_click_count"`
+	LastClickedAt    *time.Time `json:"last_clicked_at"`
+	Notes            *string    `json:"notes"`
+	CreatedVia       string     `json:"created_via"`
+	DeletedAt        *time.Time `json:"deleted_at"`
+	CreatedAt        time.Time  `json:"created_at"`
+	UpdatedAt        time.Time  `json:"updated_at"`
 }
 
 type Workspace struct {

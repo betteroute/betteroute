@@ -34,13 +34,26 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 	}
 
 	l := &Link{
-		ID:          "lnk_" + xid.New().String(),
-		WorkspaceID: input.WorkspaceID,
-		ShortCode:   code,
-		DestURL:     input.DestURL,
-		Title:       input.Title,
-		Description: input.Description,
-		ExpiresAt:   input.ExpiresAt,
+		ID:            "lnk_" + xid.New().String(),
+		WorkspaceID:   input.WorkspaceID,
+		ShortCode:     code,
+		DestURL:       input.DestURL,
+		Title:         input.Title,
+		Description:   input.Description,
+		StartsAt:      input.StartsAt,
+		ExpiresAt:     input.ExpiresAt,
+		ExpirationURL: input.ExpirationURL,
+		MaxClicks:     input.MaxClicks,
+		UTMSource:     input.UTMSource,
+		UTMMedium:     input.UTMMedium,
+		UTMCampaign:   input.UTMCampaign,
+		UTMTerm:       input.UTMTerm,
+		UTMContent:    input.UTMContent,
+		OGTitle:       input.OGTitle,
+		OGDescription: input.OGDescription,
+		OGImage:       input.OGImage,
+		Notes:         input.Notes,
+		CreatedVia:    "web", // TODO: derive from auth context (web, api, import)
 	}
 
 	created, err := s.store.Insert(ctx, l)
@@ -90,8 +103,8 @@ func (s *Service) List(ctx context.Context, workspaceID string, limit, offset in
 }
 
 // Update partially updates a link.
-func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput, setExpiry bool) (*Link, error) {
-	l, err := s.store.Update(ctx, id, workspaceID, input, setExpiry)
+func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error) {
+	l, err := s.store.Update(ctx, id, workspaceID, input, nulls)
 	if err != nil {
 		return nil, err
 	}
