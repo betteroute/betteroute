@@ -24,7 +24,9 @@ import (
 	"github.com/execrc/betteroute/internal/docs"
 	"github.com/execrc/betteroute/internal/errs"
 	"github.com/execrc/betteroute/internal/health"
+	"github.com/execrc/betteroute/internal/link"
 	"github.com/execrc/betteroute/internal/openapi"
+	"github.com/execrc/betteroute/internal/redirect"
 )
 
 func main() {
@@ -89,6 +91,19 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 		docs.Register(app, openapi.Spec)
 		logger.Info("API docs available at /docs")
 	}
+
+	// Links.
+	linkStore := link.NewStore(pool)
+	linkSvc := link.NewService(linkStore)
+	linkHandler := link.NewHandler(linkSvc)
+
+	// API v1.
+	api := app.Group("/api/v1")
+	linkHandler.Register(api)
+
+	// Redirect — catch-all, registered last.
+	redirectSvc := redirect.NewService(pool)
+	redirect.NewHandler(redirectSvc).Register(app)
 
 	logger.Debug("routes registered")
 }
