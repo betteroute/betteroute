@@ -14,6 +14,7 @@ import (
 type Link struct {
 	ID          string `json:"id"`
 	WorkspaceID string `json:"workspace_id"`
+	FolderID    string `json:"folder_id,omitempty"`
 	ShortCode   string `json:"short_code"`
 	ShortURL    string `json:"short_url"`
 	DestURL     string `json:"dest_url"`
@@ -60,8 +61,9 @@ type Link struct {
 // CreateInput is the input for creating a new link.
 type CreateInput struct {
 	WorkspaceID string `json:"workspace_id" validate:"required"`
+	FolderID    string `json:"folder_id"    validate:"omitempty"`
 	DestURL     string `json:"dest_url"     validate:"required,url,max=2048"`
-	ShortCode   string `json:"short_code"   validate:"omitempty,min=1,max=50"`
+	ShortCode   string `json:"short_code"   validate:"omitempty,min=1,max=50,shortcode"`
 	Title       string `json:"title"        validate:"omitempty,max=200"`
 	Description string `json:"description"  validate:"omitempty,max=500"`
 
@@ -92,6 +94,7 @@ type CreateInput struct {
 // UpdateInput is the input for updating an existing link.
 // Use patch.Bind[UpdateInput] to parse and track field presence.
 type UpdateInput struct {
+	FolderID    *string `json:"folder_id"`
 	DestURL     *string `json:"dest_url"     validate:"omitempty,url,max=2048"`
 	Title       *string `json:"title"        validate:"omitempty,max=200"`
 	Description *string `json:"description"  validate:"omitempty,max=500"`
@@ -119,6 +122,14 @@ type UpdateInput struct {
 
 	// Internal
 	Notes *string `json:"notes" validate:"omitempty,max=5000"`
+}
+
+// NullableFields tracks which nullable fields should be explicitly set (vs ignored).
+type NullableFields struct {
+	StartsAt  bool
+	ExpiresAt bool
+	MaxClicks bool
+	FolderID  bool
 }
 
 // Sentinel errors.

@@ -36,6 +36,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 	l := &Link{
 		ID:            "lnk_" + xid.New().String(),
 		WorkspaceID:   input.WorkspaceID,
+		FolderID:      input.FolderID,
 		ShortCode:     code,
 		DestURL:       input.DestURL,
 		Title:         input.Title,

@@ -52,7 +52,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return errs.BadRequest("workspace_id is required")
 	}
 
-	pg, perPg := page.Normalize(queryInt(c, "page"), queryInt(c, "per_page"))
+	pg, perPg := page.Normalize(parseQueryInt(c, "page"), parseQueryInt(c, "per_page"))
 	offset := page.Offset(pg, perPg)
 
 	links, total, err := h.svc.List(c.Context(), wsID, perPg, offset)
@@ -157,6 +157,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		StartsAt:  fields.Has("starts_at"),
 		ExpiresAt: fields.Has("expires_at"),
 		MaxClicks: fields.Has("max_clicks"),
+		FolderID:  fields.Has("folder_id"),
 	})
 	if err != nil {
 		return h.mapError(err)
@@ -202,8 +203,8 @@ func (h *Handler) mapError(err error) error {
 	}
 }
 
-// queryInt reads an integer query param, returning 0 if missing or invalid.
-func queryInt(c fiber.Ctx, key string) int {
+// parseQueryInt reads an integer query param, returning 0 if missing or invalid.
+func parseQueryInt(c fiber.Ctx, key string) int {
 	v, _ := strconv.Atoi(c.Query(key))
 	return v
 }

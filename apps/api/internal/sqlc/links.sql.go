@@ -23,7 +23,7 @@ func (q *Queries) CountLinksByWorkspace(ctx context.Context, workspaceID string)
 }
 
 const findLinkByID = `-- name: FindLinkByID :one
-SELECT id, workspace_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 LIMIT 1
 `
@@ -39,6 +39,7 @@ func (q *Queries) FindLinkByID(ctx context.Context, arg FindLinkByIDParams) (Lin
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,
@@ -69,18 +70,19 @@ func (q *Queries) FindLinkByID(ctx context.Context, arg FindLinkByIDParams) (Lin
 }
 
 const findLinkByShortCode = `-- name: FindLinkByShortCode :one
-SELECT id, workspace_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE short_code = $1 AND deleted_at IS NULL
 LIMIT 1
 `
 
-// Redirect hot path. Uses covering index idx_links_redirect.
+// Used by link CRUD lookups. Not on the redirect hot path (see ResolveLink).
 func (q *Queries) FindLinkByShortCode(ctx context.Context, shortCode string) (Link, error) {
 	row := q.db.QueryRow(ctx, findLinkByShortCode, shortCode)
 	var i Link
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,
@@ -110,39 +112,58 @@ func (q *Queries) FindLinkByShortCode(ctx context.Context, shortCode string) (Li
 	return i, err
 }
 
-const incrementClickCount = `-- name: IncrementClickCount :exec
-UPDATE links SET
-    click_count = click_count + 1,
-    last_clicked_at = NOW()
-WHERE id = $1
+const findRedirectFallback = `-- name: FindRedirectFallback :one
+SELECT is_active, starts_at, expires_at, expiration_url, max_clicks, click_count
+FROM links
+WHERE short_code = $1 AND deleted_at IS NULL
+LIMIT 1
 `
 
-// Called async after redirect. Simple increment until batching is added.
-func (q *Queries) IncrementClickCount(ctx context.Context, id string) error {
-	_, err := q.db.Exec(ctx, incrementClickCount, id)
-	return err
+type FindRedirectFallbackRow struct {
+	IsActive      bool       `json:"is_active"`
+	StartsAt      *time.Time `json:"starts_at"`
+	ExpiresAt     *time.Time `json:"expires_at"`
+	ExpirationUrl *string    `json:"expiration_url"`
+	MaxClicks     *int32     `json:"max_clicks"`
+	ClickCount    int64      `json:"click_count"`
+}
+
+// Slim diagnostic query: only called when ResolveLink returns 0 rows.
+func (q *Queries) FindRedirectFallback(ctx context.Context, shortCode string) (FindRedirectFallbackRow, error) {
+	row := q.db.QueryRow(ctx, findRedirectFallback, shortCode)
+	var i FindRedirectFallbackRow
+	err := row.Scan(
+		&i.IsActive,
+		&i.StartsAt,
+		&i.ExpiresAt,
+		&i.ExpirationUrl,
+		&i.MaxClicks,
+		&i.ClickCount,
+	)
+	return i, err
 }
 
 const insertLink = `-- name: InsertLink :one
 
 INSERT INTO links (
-    id, workspace_id, short_code, dest_url, title, description,
+    id, workspace_id, folder_id, short_code, dest_url, title, description,
     starts_at, expires_at, expiration_url, max_clicks,
     utm_source, utm_medium, utm_campaign, utm_term, utm_content,
     og_title, og_description, og_image,
     notes, created_via
 ) VALUES (
-    $1, $2, $3, $4, $5, $6,
-    $7, $8, $9, $10,
-    $11, $12, $13, $14, $15,
-    $16, $17, $18,
-    $19, $20
-) RETURNING id, workspace_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7,
+    $8, $9, $10, $11,
+    $12, $13, $14, $15, $16,
+    $17, $18, $19,
+    $20, $21
+) RETURNING id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
 `
 
 type InsertLinkParams struct {
 	ID            string     `json:"id"`
 	WorkspaceID   string     `json:"workspace_id"`
+	FolderID      *string    `json:"folder_id"`
 	ShortCode     string     `json:"short_code"`
 	DestUrl       string     `json:"dest_url"`
 	Title         *string    `json:"title"`
@@ -168,6 +189,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 	row := q.db.QueryRow(ctx, insertLink,
 		arg.ID,
 		arg.WorkspaceID,
+		arg.FolderID,
 		arg.ShortCode,
 		arg.DestUrl,
 		arg.Title,
@@ -191,6 +213,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,
@@ -221,7 +244,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 }
 
 const listLinksByWorkspace = `-- name: ListLinksByWorkspace :many
-SELECT id, workspace_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -245,6 +268,7 @@ func (q *Queries) ListLinksByWorkspace(ctx context.Context, arg ListLinksByWorks
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
+			&i.FolderID,
 			&i.ShortCode,
 			&i.DestUrl,
 			&i.Title,
@@ -279,6 +303,54 @@ func (q *Queries) ListLinksByWorkspace(ctx context.Context, arg ListLinksByWorks
 		return nil, err
 	}
 	return items, nil
+}
+
+const resolveLink = `-- name: ResolveLink :one
+UPDATE links SET
+    click_count = click_count + 1,
+    last_clicked_at = NOW()
+WHERE short_code = $1
+    AND deleted_at IS NULL
+    AND is_active = TRUE
+    AND (starts_at IS NULL OR starts_at <= NOW())
+    AND (expires_at IS NULL OR expires_at > NOW())
+    AND (max_clicks IS NULL OR click_count < max_clicks)
+RETURNING id, dest_url,
+    utm_source, utm_medium, utm_campaign, utm_term, utm_content,
+    og_title, og_description, og_image
+`
+
+type ResolveLinkRow struct {
+	ID            string  `json:"id"`
+	DestUrl       string  `json:"dest_url"`
+	UtmSource     *string `json:"utm_source"`
+	UtmMedium     *string `json:"utm_medium"`
+	UtmCampaign   *string `json:"utm_campaign"`
+	UtmTerm       *string `json:"utm_term"`
+	UtmContent    *string `json:"utm_content"`
+	OgTitle       *string `json:"og_title"`
+	OgDescription *string `json:"og_description"`
+	OgImage       *string `json:"og_image"`
+}
+
+// Redirect hot path: atomic increment + return in one round-trip.
+// Returns no rows when the link is invalid (deleted, inactive, expired, not started, or click-limited).
+func (q *Queries) ResolveLink(ctx context.Context, shortCode string) (ResolveLinkRow, error) {
+	row := q.db.QueryRow(ctx, resolveLink, shortCode)
+	var i ResolveLinkRow
+	err := row.Scan(
+		&i.ID,
+		&i.DestUrl,
+		&i.UtmSource,
+		&i.UtmMedium,
+		&i.UtmCampaign,
+		&i.UtmTerm,
+		&i.UtmContent,
+		&i.OgTitle,
+		&i.OgDescription,
+		&i.OgImage,
+	)
+	return i, err
 }
 
 const softDeleteLink = `-- name: SoftDeleteLink :execrows
@@ -320,9 +392,10 @@ UPDATE links SET
     og_description = COALESCE($18, og_description),
     og_image = COALESCE($19, og_image),
     notes = COALESCE($20, notes),
+    folder_id = CASE WHEN $21::BOOLEAN THEN $22 ELSE folder_id END,
     updated_at = NOW()
-WHERE id = $21 AND workspace_id = $22 AND deleted_at IS NULL
-RETURNING id, workspace_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
+WHERE id = $23 AND workspace_id = $24 AND deleted_at IS NULL
+RETURNING id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
 `
 
 type UpdateLinkParams struct {
@@ -346,6 +419,8 @@ type UpdateLinkParams struct {
 	OgDescription *string    `json:"og_description"`
 	OgImage       *string    `json:"og_image"`
 	Notes         *string    `json:"notes"`
+	SetFolderID   bool       `json:"set_folder_id"`
+	FolderID      *string    `json:"folder_id"`
 	ID            string     `json:"id"`
 	WorkspaceID   string     `json:"workspace_id"`
 }
@@ -372,6 +447,8 @@ func (q *Queries) UpdateLink(ctx context.Context, arg UpdateLinkParams) (Link, e
 		arg.OgDescription,
 		arg.OgImage,
 		arg.Notes,
+		arg.SetFolderID,
+		arg.FolderID,
 		arg.ID,
 		arg.WorkspaceID,
 	)
@@ -379,6 +456,7 @@ func (q *Queries) UpdateLink(ctx context.Context, arg UpdateLinkParams) (Link, e
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,

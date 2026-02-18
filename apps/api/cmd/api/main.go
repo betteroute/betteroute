@@ -23,10 +23,12 @@ import (
 	"github.com/execrc/betteroute/internal/db"
 	"github.com/execrc/betteroute/internal/docs"
 	"github.com/execrc/betteroute/internal/errs"
+	"github.com/execrc/betteroute/internal/folder"
 	"github.com/execrc/betteroute/internal/health"
 	"github.com/execrc/betteroute/internal/link"
 	"github.com/execrc/betteroute/internal/openapi"
 	"github.com/execrc/betteroute/internal/redirect"
+	"github.com/execrc/betteroute/internal/tag"
 )
 
 func main() {
@@ -97,9 +99,24 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 	linkSvc := link.NewService(linkStore)
 	linkHandler := link.NewHandler(linkSvc)
 
+	// Folders.
+	folderStore := folder.NewStore(pool)
+	folderSvc := folder.NewService(folderStore)
+	folderHandler := folder.NewHandler(folderSvc)
+
+	// Tags.
+	tagStore := tag.NewStore(pool)
+	tagSvc := tag.NewService(tagStore)
+	tagHandler := tag.NewHandler(tagSvc)
+
 	// API v1.
 	api := app.Group("/api/v1")
 	linkHandler.Register(api)
+	folderHandler.Register(api)
+	tagHandler.Register(api)
+
+	// Tag-link association routes: /api/v1/links/:id/tags
+	tagHandler.RegisterLinkRoutes(api.Group("/links"))
 
 	// Redirect — catch-all, registered last.
 	redirectSvc := redirect.NewService(pool)

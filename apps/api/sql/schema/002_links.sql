@@ -5,6 +5,7 @@
 CREATE TABLE links (
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    folder_id       TEXT,                         -- optional grouping (FK in 003_folders.sql)
 
     -- Core
     short_code      TEXT NOT NULL,
@@ -103,3 +104,8 @@ CREATE INDEX idx_links_workspace
 CREATE INDEX idx_links_expiring
     ON links(expires_at)
     WHERE expires_at IS NOT NULL AND is_active = TRUE AND deleted_at IS NULL;
+
+-- Filter links by folder.
+CREATE INDEX idx_links_folder
+    ON links(folder_id)
+    WHERE folder_id IS NOT NULL AND deleted_at IS NULL;

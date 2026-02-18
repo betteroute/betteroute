@@ -13,13 +13,6 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// NullableFields tracks which nullable fields should be explicitly set (vs ignored).
-type NullableFields struct {
-	StartsAt  bool
-	ExpiresAt bool
-	MaxClicks bool
-}
-
 // Storer defines the interface for link storage operations.
 type Storer interface {
 	Insert(ctx context.Context, l *Link) (*Link, error)
@@ -43,6 +36,7 @@ func (s *Store) Insert(ctx context.Context, l *Link) (*Link, error) {
 	row, err := s.q.InsertLink(ctx, sqlc.InsertLinkParams{
 		ID:            l.ID,
 		WorkspaceID:   l.WorkspaceID,
+		FolderID:      ptr.ToNonZero(l.FolderID),
 		ShortCode:     l.ShortCode,
 		DestUrl:       l.DestURL,
 		Title:         ptr.ToNonZero(l.Title),
@@ -132,6 +126,8 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 		OgDescription: input.OGDescription,
 		OgImage:       input.OGImage,
 		Notes:         input.Notes,
+		SetFolderID:   nulls.FolderID,
+		FolderID:      input.FolderID,
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -161,6 +157,7 @@ func toLink(row sqlc.Link) *Link {
 	return &Link{
 		ID:               row.ID,
 		WorkspaceID:      row.WorkspaceID,
+		FolderID:         ptr.From(row.FolderID),
 		ShortCode:        row.ShortCode,
 		DestURL:          row.DestUrl,
 		Title:            ptr.From(row.Title),

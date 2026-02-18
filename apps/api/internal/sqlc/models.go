@@ -8,9 +8,21 @@ import (
 	"time"
 )
 
+type Folder struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	Name        string     `json:"name"`
+	Color       string     `json:"color"`
+	Position    int32      `json:"position"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 type Link struct {
 	ID               string     `json:"id"`
 	WorkspaceID      string     `json:"workspace_id"`
+	FolderID         *string    `json:"folder_id"`
 	ShortCode        string     `json:"short_code"`
 	DestUrl          string     `json:"dest_url"`
 	Title            *string    `json:"title"`
@@ -36,6 +48,22 @@ type Link struct {
 	DeletedAt        *time.Time `json:"deleted_at"`
 	CreatedAt        time.Time  `json:"created_at"`
 	UpdatedAt        time.Time  `json:"updated_at"`
+}
+
+type LinkTag struct {
+	LinkID    string    `json:"link_id"`
+	TagID     string    `json:"tag_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Tag struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	Name        string     `json:"name"`
+	Color       string     `json:"color"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
 type Workspace struct {

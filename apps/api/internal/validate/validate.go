@@ -14,6 +14,10 @@ import (
 // v is the shared validator instance.
 var v = validator.New(validator.WithRequiredStructEnabled())
 
+func init() {
+	v.RegisterValidation("shortcode", isShortCode)
+}
+
 // Struct validates the given struct and returns field errors, if any.
 // Returns nil when validation passes.
 func Struct(s any) []errs.FieldError {
@@ -52,9 +56,34 @@ func message(fe validator.FieldError) string {
 		return "must be one of: " + fe.Param()
 	case "email":
 		return "must be a valid email address"
+	case "gt":
+		return "must be greater than " + fe.Param()
+	case "gte":
+		return "must be at least " + fe.Param()
+	case "hexcolor":
+		return "must be a valid hex color (#RRGGBB)"
+	case "len":
+		return "must be exactly " + fe.Param() + " characters"
+	case "shortcode":
+		return "must contain only letters, numbers, hyphens, and underscores"
 	default:
 		return "failed " + fe.Tag() + " validation"
 	}
+}
+
+// isShortCode validates that s contains only [a-zA-Z0-9_-].
+func isShortCode(fl validator.FieldLevel) bool {
+	s := fl.Field().String()
+	if len(s) == 0 {
+		return false
+	}
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
+			return false
+		}
+	}
+	return true
 }
 
 // toSnakeCase converts PascalCase field names to snake_case.
@@ -67,15 +96,13 @@ func toSnakeCase(s string) string {
 		if r >= 'A' && r <= 'Z' {
 			if i > 0 {
 				prev := s[i-1]
-				// Insert underscore before uppercase if preceded by lowercase,
-				// or if it starts a new word in an acronym (e.g. "ID" → "id").
 				if prev >= 'a' && prev <= 'z' {
 					b.WriteByte('_')
 				} else if i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z' {
 					b.WriteByte('_')
 				}
 			}
-			b.WriteRune(r + 32) // toLower
+			b.WriteRune(r + 32)
 		} else {
 			b.WriteRune(r)
 		}
