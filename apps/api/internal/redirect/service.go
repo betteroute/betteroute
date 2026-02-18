@@ -3,7 +3,6 @@ package redirect
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/url"
 	"time"
 
@@ -25,59 +24,75 @@ func NewService(pool *pgxpool.Pool) *Service {
 }
 
 // Resolve looks up a short code, validates the link, and returns a Resolution.
+//
+// Happy path (1 DB round-trip): ResolveLink atomically increments click_count
+// and returns the needed columns. Fallback path (2 round-trips): when the
+// UPDATE touches 0 rows, a slim SELECT diagnoses why.
 func (s *Service) Resolve(ctx context.Context, code string) (*Resolution, error) {
-	row, err := s.q.FindLinkByShortCode(ctx, code)
+	// Hot path: atomic UPDATE increments click_count and returns only the
+	// columns needed for redirect in a single round-trip.
+	row, err := s.q.ResolveLink(ctx, code)
+	if err == nil {
+		return toResolution(row), nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err // unexpected DB error
+	}
+
+	// Cold path: the UPDATE matched nothing — the link is either missing,
+	// inactive, expired, not yet started, or click-limited. A slim SELECT
+	// diagnoses the reason so we can serve expiration_url fallbacks.
+	return s.diagnoseFallback(ctx, code)
+}
+
+// diagnoseFallback determines why ResolveLink returned no rows and returns
+// the appropriate error or an expiration_url redirect.
+func (s *Service) diagnoseFallback(ctx context.Context, code string) (*Resolution, error) {
+	fb, err := s.q.FindRedirectFallback(ctx, code)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, ErrNotFound // short code doesn't exist at all
 		}
 		return nil, err
 	}
 
-	if !row.IsActive {
+	// Walk the gate checks in the same order as the UPDATE's WHERE clause
+	// to return the most specific reason for rejection.
+
+	if !fb.IsActive {
 		return nil, ErrInactive
 	}
 
 	now := time.Now()
 
-	// Check scheduling: link hasn't started yet.
-	if row.StartsAt != nil && now.Before(*row.StartsAt) {
+	if fb.StartsAt != nil && now.Before(*fb.StartsAt) {
 		return nil, ErrNotStarted
 	}
 
-	// Check expiration: link has expired.
-	if row.ExpiresAt != nil && now.After(*row.ExpiresAt) {
-		if row.ExpirationUrl != nil && *row.ExpirationUrl != "" {
-			return &Resolution{LinkID: row.ID, DestURL: *row.ExpirationUrl}, nil
-		}
-		return nil, ErrExpired
+	if fb.ExpiresAt != nil && now.After(*fb.ExpiresAt) {
+		return resolveExpiration(fb.ExpirationUrl, ErrExpired)
 	}
 
-	// Check click limit: link has reached max clicks.
-	if row.MaxClicks != nil && row.ClickCount >= int64(*row.MaxClicks) {
-		if row.ExpirationUrl != nil && *row.ExpirationUrl != "" {
-			return &Resolution{LinkID: row.ID, DestURL: *row.ExpirationUrl}, nil
-		}
-		return nil, ErrClickLimitReached
+	if fb.MaxClicks != nil && fb.ClickCount >= int64(*fb.MaxClicks) {
+		return resolveExpiration(fb.ExpirationUrl, ErrClickLimitReached)
 	}
 
-	// Increment click count async — doesn't block the redirect.
-	// TODO: replace with batched writer when adding analytics pipeline.
-	go func() {
-		if err := s.q.IncrementClickCount(context.Background(), row.ID); err != nil {
-			slog.Error("incrementing click count", "link_id", row.ID, "error", err)
-		}
-	}()
-
-	return toResolution(row), nil
+	// Shouldn't reach here — gate checks mirror the UPDATE WHERE clause.
+	return nil, ErrNotFound
 }
 
-// toResolution maps a sqlc.Link to a redirect Resolution.
-func toResolution(row sqlc.Link) *Resolution {
-	dest := row.DestUrl
+// resolveExpiration redirects to expiration_url if set, otherwise returns the
+// given sentinel error. Used for both expired and click-limited links.
+func resolveExpiration(expirationURL *string, sentinel error) (*Resolution, error) {
+	if expirationURL != nil && *expirationURL != "" {
+		return &Resolution{DestURL: *expirationURL}, nil
+	}
+	return nil, sentinel
+}
 
-	// Append UTM parameters to destination URL if any are set.
-	dest = appendUTM(dest, row)
+// toResolution maps a sqlc.ResolveLinkRow to a redirect Resolution.
+func toResolution(row sqlc.ResolveLinkRow) *Resolution {
+	dest := appendUTM(row.DestUrl, row)
 
 	return &Resolution{
 		LinkID:        row.ID,
@@ -89,7 +104,7 @@ func toResolution(row sqlc.Link) *Resolution {
 }
 
 // appendUTM appends stored UTM params to the destination URL query string.
-func appendUTM(dest string, row sqlc.Link) string {
+func appendUTM(dest string, row sqlc.ResolveLinkRow) string {
 	params := []struct {
 		key string
 		val *string
@@ -101,7 +116,7 @@ func appendUTM(dest string, row sqlc.Link) string {
 		{"utm_content", row.UtmContent},
 	}
 
-	// Fast path: skip URL parsing if no UTM params are set.
+	// Fast exit: skip URL parsing when no UTM params are set (common case).
 	hasAny := false
 	for _, p := range params {
 		if p.val != nil && *p.val != "" {
@@ -115,7 +130,7 @@ func appendUTM(dest string, row sqlc.Link) string {
 
 	u, err := url.Parse(dest)
 	if err != nil {
-		return dest // invalid URL — return as-is
+		return dest // malformed dest — return as-is, don't block the redirect
 	}
 
 	q := u.Query()
