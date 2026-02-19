@@ -1,6 +1,9 @@
 package redirect
 
-import "errors"
+import (
+	"context"
+	"errors"
+)
 
 // Resolution is the terminal decision of a redirect request.
 // The handler acts on the result; the service decides what it contains.
@@ -22,7 +25,7 @@ func (r *Resolution) HasOG() bool {
 
 // Resolver resolves a short code to a redirect decision.
 type Resolver interface {
-	Resolve(code string) (*Resolution, error)
+	Resolve(ctx context.Context, code string) (*Resolution, error)
 }
 
 // Sentinel errors.
