@@ -4,18 +4,48 @@
 package validate
 
 import (
+	"reflect"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 
 	"github.com/execrc/betteroute/internal/errs"
+	"github.com/execrc/betteroute/internal/opt"
 )
 
 // v is the shared validator instance.
 var v = validator.New(validator.WithRequiredStructEnabled())
 
 func init() {
+	// Use JSON tag names in error messages so field names match the API contract.
+	v.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name, _, _ := strings.Cut(fld.Tag.Get("json"), ",")
+		if name == "" || name == "-" {
+			return fld.Name
+		}
+		return name
+	})
+
 	v.RegisterValidation("shortcode", isShortCode)
+
+	// Unwrap opt.Field[T] so validator sees the inner Value for tag-based checks.
+	v.RegisterCustomTypeFunc(extractOptField,
+		opt.Field[string]{},
+		opt.Field[*string]{},
+		opt.Field[int32]{},
+		opt.Field[*int32]{},
+		opt.Field[bool]{},
+		opt.Field[*bool]{},
+		opt.Field[*time.Time]{},
+	)
+}
+
+// extractOptField returns the Value inside an opt.Field so the validator
+// can apply struct tags (omitempty, url, max, etc.) to the actual value.
+func extractOptField(field reflect.Value) any {
+	return field.FieldByName("Value").Interface()
 }
 
 // Struct validates the given struct and returns field errors, if any.
@@ -34,7 +64,7 @@ func Struct(s any) []errs.FieldError {
 	fields := make([]errs.FieldError, 0, len(validationErrors))
 	for _, fe := range validationErrors {
 		fields = append(fields, errs.FieldError{
-			Field:   toSnakeCase(fe.Field()),
+			Field:   fe.Field(),
 			Message: message(fe),
 		})
 	}
@@ -71,41 +101,9 @@ func message(fe validator.FieldError) string {
 	}
 }
 
+var shortCodeRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
+
 // isShortCode validates that s contains only [a-zA-Z0-9_-].
 func isShortCode(fl validator.FieldLevel) bool {
-	s := fl.Field().String()
-	if len(s) == 0 {
-		return false
-	}
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if !((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_') {
-			return false
-		}
-	}
-	return true
-}
-
-// toSnakeCase converts PascalCase field names to snake_case.
-// "DestURL" → "dest_url", "WorkspaceID" → "workspace_id".
-func toSnakeCase(s string) string {
-	var b strings.Builder
-	b.Grow(len(s) + 4)
-
-	for i, r := range s {
-		if r >= 'A' && r <= 'Z' {
-			if i > 0 {
-				prev := s[i-1]
-				if prev >= 'a' && prev <= 'z' {
-					b.WriteByte('_')
-				} else if i+1 < len(s) && s[i+1] >= 'a' && s[i+1] <= 'z' {
-					b.WriteByte('_')
-				}
-			}
-			b.WriteRune(r + 32)
-		} else {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
+	return shortCodeRe.MatchString(fl.Field().String())
 }
