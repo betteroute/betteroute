@@ -13,23 +13,15 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Storer defines the interface for link storage operations.
-type Storer interface {
-	Insert(ctx context.Context, l *Link) (*Link, error)
-	FindByID(ctx context.Context, id, workspaceID string) (*Link, error)
-	List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, int, error)
-	Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error)
-	SoftDelete(ctx context.Context, id, workspaceID string) error
-}
-
 // Store handles link database operations.
 type Store struct {
-	q *sqlc.Queries
+	q    *sqlc.Queries
+	pool *pgxpool.Pool
 }
 
 // NewStore creates a new link store.
 func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{q: sqlc.New(pool)}
+	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
 func (s *Store) Insert(ctx context.Context, l *Link) (*Link, error) {
@@ -102,33 +94,71 @@ func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int)
 	return links, int(total), nil
 }
 
-func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error) {
-	row, err := s.q.UpdateLink(ctx, sqlc.UpdateLinkParams{
-		ID:            id,
-		WorkspaceID:   workspaceID,
-		DestUrl:       input.DestURL,
-		Title:         input.Title,
-		Description:   input.Description,
-		IsActive:      input.IsActive,
-		SetStartsAt:   nulls.StartsAt,
-		StartsAt:      input.StartsAt,
-		SetExpiresAt:  nulls.ExpiresAt,
-		ExpiresAt:     input.ExpiresAt,
-		ExpirationUrl: input.ExpirationURL,
-		SetMaxClicks:  nulls.MaxClicks,
-		MaxClicks:     input.MaxClicks,
-		UtmSource:     input.UTMSource,
-		UtmMedium:     input.UTMMedium,
-		UtmCampaign:   input.UTMCampaign,
-		UtmTerm:       input.UTMTerm,
-		UtmContent:    input.UTMContent,
-		OgTitle:       input.OGTitle,
-		OgDescription: input.OGDescription,
-		OgImage:       input.OGImage,
-		Notes:         input.Notes,
-		SetFolderID:   nulls.FolderID,
-		FolderID:      input.FolderID,
-	})
+func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Link, error) {
+	var u db.Update
+
+	if input.DestURL.Set {
+		u.Set("dest_url", input.DestURL.Value)
+	}
+	if input.IsActive.Set {
+		u.Set("is_active", input.IsActive.Value)
+	}
+	if input.Title.Set {
+		u.Set("title", input.Title.Value)
+	}
+	if input.Description.Set {
+		u.Set("description", input.Description.Value)
+	}
+	if input.StartsAt.Set {
+		u.Set("starts_at", input.StartsAt.Value)
+	}
+	if input.ExpiresAt.Set {
+		u.Set("expires_at", input.ExpiresAt.Value)
+	}
+	if input.ExpirationURL.Set {
+		u.Set("expiration_url", input.ExpirationURL.Value)
+	}
+	if input.MaxClicks.Set {
+		u.Set("max_clicks", input.MaxClicks.Value)
+	}
+	if input.UTMSource.Set {
+		u.Set("utm_source", input.UTMSource.Value)
+	}
+	if input.UTMMedium.Set {
+		u.Set("utm_medium", input.UTMMedium.Value)
+	}
+	if input.UTMCampaign.Set {
+		u.Set("utm_campaign", input.UTMCampaign.Value)
+	}
+	if input.UTMTerm.Set {
+		u.Set("utm_term", input.UTMTerm.Value)
+	}
+	if input.UTMContent.Set {
+		u.Set("utm_content", input.UTMContent.Value)
+	}
+	if input.OGTitle.Set {
+		u.Set("og_title", input.OGTitle.Value)
+	}
+	if input.OGDescription.Set {
+		u.Set("og_description", input.OGDescription.Value)
+	}
+	if input.OGImage.Set {
+		u.Set("og_image", input.OGImage.Value)
+	}
+	if input.Notes.Set {
+		u.Set("notes", input.Notes.Value)
+	}
+	if input.FolderID.Set {
+		u.Set("folder_id", input.FolderID.Value)
+	}
+
+	if u.IsEmpty() {
+		return s.FindByID(ctx, id, workspaceID)
+	}
+
+	sql, args := u.Build("links", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
+	rows, _ := s.pool.Query(ctx, sql, args...)
+	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Link])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}

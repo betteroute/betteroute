@@ -2,6 +2,7 @@ package link
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/rs/xid"
@@ -13,11 +14,11 @@ var primaryDomain = "http://localhost:8080"
 
 // Service handles link business logic.
 type Service struct {
-	store Storer
+	store *Store
 }
 
 // NewService creates a new link service.
-func NewService(store Storer) *Service {
+func NewService(store *Store) *Service {
 	return &Service{store: store}
 }
 
@@ -60,7 +61,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 	created, err := s.store.Insert(ctx, l)
 	if err != nil {
 		// Retry with new code on collision (only if auto-generated)
-		if err == ErrShortCodeTaken && input.ShortCode == "" {
+		if errors.Is(err, ErrShortCodeTaken) && input.ShortCode == "" {
 			for i := 0; i < maxRetries; i++ {
 				code, err = generateShortCode()
 				if err != nil {
@@ -104,8 +105,8 @@ func (s *Service) List(ctx context.Context, workspaceID string, limit, offset in
 }
 
 // Update partially updates a link.
-func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Link, error) {
-	l, err := s.store.Update(ctx, id, workspaceID, input, nulls)
+func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Link, error) {
+	l, err := s.store.Update(ctx, id, workspaceID, input)
 	if err != nil {
 		return nil, err
 	}

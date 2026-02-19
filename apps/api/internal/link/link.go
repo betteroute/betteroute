@@ -6,6 +6,8 @@ import (
 	"crypto/rand"
 	"errors"
 	"time"
+
+	"github.com/execrc/betteroute/internal/opt"
 )
 
 // Domain type.
@@ -91,45 +93,37 @@ type CreateInput struct {
 	Notes string `json:"notes" validate:"omitempty,max=5000"`
 }
 
-// UpdateInput is the input for updating an existing link.
-// Use patch.Bind[UpdateInput] to parse and track field presence.
+// UpdateInput is the input for partially updating a link.
+// Fields use opt.Field to track presence for PATCH semantics.
 type UpdateInput struct {
-	FolderID    *string `json:"folder_id"`
-	DestURL     *string `json:"dest_url"     validate:"omitempty,url,max=2048"`
-	Title       *string `json:"title"        validate:"omitempty,max=200"`
-	Description *string `json:"description"  validate:"omitempty,max=500"`
-	IsActive    *bool   `json:"is_active"`
+	FolderID    opt.Field[*string] `json:"folder_id" swaggertype:"string"`
+	DestURL     opt.Field[*string] `json:"dest_url"     validate:"omitempty,url,max=2048" swaggertype:"string"`
+	Title       opt.Field[*string] `json:"title"        validate:"omitempty,max=200" swaggertype:"string"`
+	Description opt.Field[*string] `json:"description"  validate:"omitempty,max=500" swaggertype:"string"`
+	IsActive    opt.Field[*bool]   `json:"is_active" swaggertype:"boolean"`
 
 	// Scheduling
-	StartsAt      *time.Time `json:"starts_at"`
-	ExpiresAt     *time.Time `json:"expires_at"`
-	ExpirationURL *string    `json:"expiration_url" validate:"omitempty,url,max=2048"`
+	StartsAt      opt.Field[*time.Time] `json:"starts_at" swaggertype:"string"`
+	ExpiresAt     opt.Field[*time.Time] `json:"expires_at" swaggertype:"string"`
+	ExpirationURL opt.Field[*string]    `json:"expiration_url" validate:"omitempty,url,max=2048" swaggertype:"string"`
 
 	// Click limits
-	MaxClicks *int32 `json:"max_clicks" validate:"omitempty,gt=0"`
+	MaxClicks opt.Field[*int32] `json:"max_clicks" validate:"omitempty,gt=0" swaggertype:"integer"`
 
 	// UTM parameters
-	UTMSource   *string `json:"utm_source"   validate:"omitempty,max=200"`
-	UTMMedium   *string `json:"utm_medium"   validate:"omitempty,max=200"`
-	UTMCampaign *string `json:"utm_campaign" validate:"omitempty,max=200"`
-	UTMTerm     *string `json:"utm_term"     validate:"omitempty,max=200"`
-	UTMContent  *string `json:"utm_content"  validate:"omitempty,max=200"`
+	UTMSource   opt.Field[*string] `json:"utm_source"   validate:"omitempty,max=200" swaggertype:"string"`
+	UTMMedium   opt.Field[*string] `json:"utm_medium"   validate:"omitempty,max=200" swaggertype:"string"`
+	UTMCampaign opt.Field[*string] `json:"utm_campaign" validate:"omitempty,max=200" swaggertype:"string"`
+	UTMTerm     opt.Field[*string] `json:"utm_term"     validate:"omitempty,max=200" swaggertype:"string"`
+	UTMContent  opt.Field[*string] `json:"utm_content"  validate:"omitempty,max=200" swaggertype:"string"`
 
 	// OG metadata overrides
-	OGTitle       *string `json:"og_title"       validate:"omitempty,max=200"`
-	OGDescription *string `json:"og_description" validate:"omitempty,max=500"`
-	OGImage       *string `json:"og_image"       validate:"omitempty,url,max=2048"`
+	OGTitle       opt.Field[*string] `json:"og_title"       validate:"omitempty,max=200" swaggertype:"string"`
+	OGDescription opt.Field[*string] `json:"og_description" validate:"omitempty,max=500" swaggertype:"string"`
+	OGImage       opt.Field[*string] `json:"og_image"       validate:"omitempty,url,max=2048" swaggertype:"string"`
 
 	// Internal
-	Notes *string `json:"notes" validate:"omitempty,max=5000"`
-}
-
-// NullableFields tracks which nullable fields should be explicitly set (vs ignored).
-type NullableFields struct {
-	StartsAt  bool
-	ExpiresAt bool
-	MaxClicks bool
-	FolderID  bool
+	Notes opt.Field[*string] `json:"notes" validate:"omitempty,max=5000" swaggertype:"string"`
 }
 
 // Sentinel errors.
