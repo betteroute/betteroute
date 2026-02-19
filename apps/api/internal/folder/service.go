@@ -10,11 +10,11 @@ const defaultColor = "#6366f1"
 
 // Service handles folder business logic.
 type Service struct {
-	store Storer
+	store *Store
 }
 
 // NewService creates a new folder service.
-func NewService(store Storer) *Service {
+func NewService(store *Store) *Service {
 	return &Service{store: store}
 }
 
@@ -46,8 +46,8 @@ func (s *Service) List(ctx context.Context, workspaceID string) ([]Folder, error
 }
 
 // Update partially updates a folder.
-func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Folder, error) {
-	return s.store.Update(ctx, id, workspaceID, input, nulls)
+func (s *Service) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Folder, error) {
+	return s.store.Update(ctx, id, workspaceID, input)
 }
 
 // Delete soft-deletes a folder.

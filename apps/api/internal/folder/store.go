@@ -12,23 +12,15 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Storer defines the interface for folder storage operations.
-type Storer interface {
-	Insert(ctx context.Context, f *Folder) (*Folder, error)
-	FindByID(ctx context.Context, id, workspaceID string) (*Folder, error)
-	List(ctx context.Context, workspaceID string) ([]Folder, error)
-	Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Folder, error)
-	SoftDelete(ctx context.Context, id, workspaceID string) error
-}
-
 // Store handles folder database operations.
 type Store struct {
-	q *sqlc.Queries
+	q    *sqlc.Queries
+	pool *pgxpool.Pool
 }
 
 // NewStore creates a new folder store.
 func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{q: sqlc.New(pool)}
+	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
 func (s *Store) Insert(ctx context.Context, f *Folder) (*Folder, error) {
@@ -75,15 +67,26 @@ func (s *Store) List(ctx context.Context, workspaceID string) ([]Folder, error) 
 	return folders, nil
 }
 
-func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput, nulls NullableFields) (*Folder, error) {
-	row, err := s.q.UpdateFolder(ctx, sqlc.UpdateFolderParams{
-		ID:          id,
-		WorkspaceID: workspaceID,
-		Name:        input.Name,
-		Color:       input.Color,
-		SetPosition: nulls.Position,
-		Position:    input.Position,
-	})
+func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Folder, error) {
+	var u db.Update
+
+	if input.Name.Set {
+		u.Set("name", input.Name.Value)
+	}
+	if input.Color.Set {
+		u.Set("color", input.Color.Value)
+	}
+	if input.Position.Set {
+		u.Set("position", input.Position.Value)
+	}
+
+	if u.IsEmpty() {
+		return s.FindByID(ctx, id, workspaceID)
+	}
+
+	sql, args := u.Build("folders", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
+	rows, _ := s.pool.Query(ctx, sql, args...)
+	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Folder])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}

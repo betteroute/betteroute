@@ -20,14 +20,6 @@ ORDER BY position, created_at;
 SELECT COUNT(*) FROM folders
 WHERE workspace_id = $1 AND deleted_at IS NULL;
 
--- name: UpdateFolder :one
-UPDATE folders SET
-    name       = COALESCE(NULLIF(sqlc.narg('name')::TEXT, ''), name),
-    color      = COALESCE(NULLIF(sqlc.narg('color')::TEXT, ''), color),
-    position   = CASE WHEN sqlc.arg('set_position')::BOOLEAN THEN sqlc.narg('position') ELSE position END,
-    updated_at = NOW()
-WHERE id = @id AND workspace_id = @workspace_id AND deleted_at IS NULL
-RETURNING *;
 
 -- name: SoftDeleteFolder :execrows
 UPDATE folders SET

@@ -4,6 +4,8 @@ package folder
 import (
 	"errors"
 	"time"
+
+	"github.com/execrc/betteroute/internal/opt"
 )
 
 // Domain type.
@@ -28,16 +30,11 @@ type CreateInput struct {
 	Color       string `json:"color"        validate:"omitempty,hexcolor,len=7"`
 }
 
-// UpdateInput is the input for updating a folder.
+// UpdateInput is the input for partially updating a folder.
 type UpdateInput struct {
-	Name     *string `json:"name"     validate:"omitempty,min=1,max=100"`
-	Color    *string `json:"color"    validate:"omitempty,hexcolor,len=7"`
-	Position *int32  `json:"position"`
-}
-
-// NullableFields tracks which nullable fields should be explicitly set (vs ignored).
-type NullableFields struct {
-	Position bool
+	Name     opt.Field[string] `json:"name"     validate:"omitempty,min=1,max=100" swaggertype:"string"`
+	Color    opt.Field[string] `json:"color"    validate:"omitempty,hexcolor,len=7" swaggertype:"string"`
+	Position opt.Field[*int32] `json:"position" swaggertype:"integer"`
 }
 
 // Sentinel errors.
