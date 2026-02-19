@@ -1,9 +1,6 @@
 // Package ptr provides generic pointer utilities for nullable database fields.
 package ptr
 
-// To returns a pointer to the given value.
-func To[T any](v T) *T { return &v }
-
 // From dereferences a pointer, returning the zero value if nil.
 func From[T any](p *T) T {
 	if p == nil {
