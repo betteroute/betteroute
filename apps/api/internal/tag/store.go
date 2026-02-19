@@ -12,26 +12,15 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Storer defines the interface for tag storage operations.
-type Storer interface {
-	Insert(ctx context.Context, t *Tag) (*Tag, error)
-	FindByID(ctx context.Context, id, workspaceID string) (*Tag, error)
-	List(ctx context.Context, workspaceID string) ([]Tag, error)
-	Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Tag, error)
-	SoftDelete(ctx context.Context, id, workspaceID string) error
-	AddToLink(ctx context.Context, linkID, tagID string) error
-	RemoveFromLink(ctx context.Context, linkID, tagID string) error
-	ListByLink(ctx context.Context, linkID string) ([]Tag, error)
-}
-
 // Store handles tag database operations.
 type Store struct {
-	q *sqlc.Queries
+	q    *sqlc.Queries
+	pool *pgxpool.Pool
 }
 
 // NewStore creates a new tag store.
 func NewStore(pool *pgxpool.Pool) *Store {
-	return &Store{q: sqlc.New(pool)}
+	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
 func (s *Store) Insert(ctx context.Context, t *Tag) (*Tag, error) {
@@ -78,12 +67,22 @@ func (s *Store) List(ctx context.Context, workspaceID string) ([]Tag, error) {
 }
 
 func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Tag, error) {
-	row, err := s.q.UpdateTag(ctx, sqlc.UpdateTagParams{
-		ID:          id,
-		WorkspaceID: workspaceID,
-		Name:        input.Name,
-		Color:       input.Color,
-	})
+	var u db.Update
+
+	if input.Name.Set {
+		u.Set("name", input.Name.Value)
+	}
+	if input.Color.Set {
+		u.Set("color", input.Color.Value)
+	}
+
+	if u.IsEmpty() {
+		return s.FindByID(ctx, id, workspaceID)
+	}
+
+	sql, args := u.Build("tags", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
+	rows, _ := s.pool.Query(ctx, sql, args...)
+	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Tag])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
 	}

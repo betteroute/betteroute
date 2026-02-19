@@ -1,12 +1,12 @@
 package tag
 
 import (
+	"encoding/json"
 	"errors"
 
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/execrc/betteroute/internal/errs"
-	"github.com/execrc/betteroute/internal/patch"
 	"github.com/execrc/betteroute/internal/validate"
 )
 
@@ -145,8 +145,8 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return errs.BadRequest("workspace_id is required")
 	}
 
-	input, _, err := patch.Bind[UpdateInput](c.Body())
-	if err != nil {
+	var input UpdateInput
+	if err := json.Unmarshal(c.Body(), &input); err != nil {
 		return errs.BadRequest("invalid request body")
 	}
 

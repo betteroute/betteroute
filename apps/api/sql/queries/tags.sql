@@ -20,13 +20,6 @@ ORDER BY name;
 SELECT COUNT(*) FROM tags
 WHERE workspace_id = $1 AND deleted_at IS NULL;
 
--- name: UpdateTag :one
-UPDATE tags SET
-    name       = COALESCE(NULLIF(sqlc.narg('name')::TEXT, ''), name),
-    color      = COALESCE(NULLIF(sqlc.narg('color')::TEXT, ''), color),
-    updated_at = NOW()
-WHERE id = @id AND workspace_id = @workspace_id AND deleted_at IS NULL
-RETURNING *;
 
 -- name: SoftDeleteTag :execrows
 UPDATE tags SET

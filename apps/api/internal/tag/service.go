@@ -10,11 +10,11 @@ const defaultColor = "#6366f1"
 
 // Service handles tag business logic.
 type Service struct {
-	store Storer
+	store *Store
 }
 
 // NewService creates a new tag service.
-func NewService(store Storer) *Service {
+func NewService(store *Store) *Service {
 	return &Service{store: store}
 }
 

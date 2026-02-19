@@ -4,6 +4,8 @@ package tag
 import (
 	"errors"
 	"time"
+
+	"github.com/execrc/betteroute/internal/opt"
 )
 
 // Domain type.
@@ -27,10 +29,10 @@ type CreateInput struct {
 	Color       string `json:"color"        validate:"omitempty,hexcolor,len=7"`
 }
 
-// UpdateInput is the input for updating a tag.
+// UpdateInput is the input for partially updating a tag.
 type UpdateInput struct {
-	Name  *string `json:"name"  validate:"omitempty,min=1,max=50"`
-	Color *string `json:"color" validate:"omitempty,hexcolor,len=7"`
+	Name  opt.Field[string] `json:"name"  validate:"omitempty,min=1,max=50" swaggertype:"string"`
+	Color opt.Field[string] `json:"color" validate:"omitempty,hexcolor,len=7" swaggertype:"string"`
 }
 
 // AddToLinkInput is the input for associating a tag with a link.

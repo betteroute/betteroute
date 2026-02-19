@@ -246,39 +246,3 @@ func (q *Queries) SoftDeleteTag(ctx context.Context, arg SoftDeleteTagParams) (i
 	}
 	return result.RowsAffected(), nil
 }
-
-const updateTag = `-- name: UpdateTag :one
-UPDATE tags SET
-    name       = COALESCE(NULLIF($1::TEXT, ''), name),
-    color      = COALESCE(NULLIF($2::TEXT, ''), color),
-    updated_at = NOW()
-WHERE id = $3 AND workspace_id = $4 AND deleted_at IS NULL
-RETURNING id, workspace_id, name, color, deleted_at, created_at, updated_at
-`
-
-type UpdateTagParams struct {
-	Name        *string `json:"name"`
-	Color       *string `json:"color"`
-	ID          string  `json:"id"`
-	WorkspaceID string  `json:"workspace_id"`
-}
-
-func (q *Queries) UpdateTag(ctx context.Context, arg UpdateTagParams) (Tag, error) {
-	row := q.db.QueryRow(ctx, updateTag,
-		arg.Name,
-		arg.Color,
-		arg.ID,
-		arg.WorkspaceID,
-	)
-	var i Tag
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.Name,
-		&i.Color,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}

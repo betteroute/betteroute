@@ -8,6 +8,30 @@ import (
 	"time"
 )
 
+type Account struct {
+	ID                string    `json:"id"`
+	UserID            string    `json:"user_id"`
+	Provider          string    `json:"provider"`
+	ProviderAccountID string    `json:"provider_account_id"`
+	PasswordHash      *string   `json:"password_hash"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+type ApiKey struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	CreatedBy   *string    `json:"created_by"`
+	Name        string     `json:"name"`
+	KeyHash     string     `json:"key_hash"`
+	KeyPrefix   string     `json:"key_prefix"`
+	ExpiresAt   *time.Time `json:"expires_at"`
+	LastUsedAt  *time.Time `json:"last_used_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+}
+
 type Folder struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
@@ -56,6 +80,17 @@ type LinkTag struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Session struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"user_id"`
+	TokenHash string    `json:"token_hash"`
+	ExpiresAt time.Time `json:"expires_at"`
+	IpAddress *string   `json:"ip_address"`
+	UserAgent *string   `json:"user_agent"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
 type Tag struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
@@ -66,6 +101,32 @@ type Tag struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type User struct {
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	AvatarUrl       *string    `json:"avatar_url"`
+	Status          string     `json:"status"`
+	OnboardedAt     *time.Time `json:"onboarded_at"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	Timezone        string     `json:"timezone"`
+	DeletedAt       *time.Time `json:"deleted_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+type VerificationToken struct {
+	ID        string     `json:"id"`
+	UserID    string     `json:"user_id"`
+	Email     string     `json:"email"`
+	TokenHash string     `json:"token_hash"`
+	Type      string     `json:"type"`
+	ExpiresAt time.Time  `json:"expires_at"`
+	UsedAt    *time.Time `json:"used_at"`
+	CreatedAt time.Time  `json:"created_at"`
+}
+
 type Workspace struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
@@ -73,4 +134,25 @@ type Workspace struct {
 	DeletedAt *time.Time `json:"deleted_at"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+}
+
+type WorkspaceInvitation struct {
+	ID          string     `json:"id"`
+	WorkspaceID string     `json:"workspace_id"`
+	Email       string     `json:"email"`
+	Role        string     `json:"role"`
+	TokenHash   string     `json:"token_hash"`
+	InvitedBy   *string    `json:"invited_by"`
+	ExpiresAt   time.Time  `json:"expires_at"`
+	AcceptedAt  *time.Time `json:"accepted_at"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+type WorkspaceMember struct {
+	WorkspaceID string    `json:"workspace_id"`
+	UserID      string    `json:"user_id"`
+	Role        string    `json:"role"`
+	InvitedBy   *string   `json:"invited_by"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
