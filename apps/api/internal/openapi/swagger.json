@@ -34,20 +34,20 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_folder.Folder"
+                                "$ref": "#/definitions/folder.Folder"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -71,7 +71,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.CreateInput"
+                            "$ref": "#/definitions/folder.CreateInput"
                         }
                     }
                 ],
@@ -79,31 +79,31 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Folder name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -139,25 +139,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -191,19 +191,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -241,7 +241,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.UpdateInput"
+                            "$ref": "#/definitions/folder.UpdateInput"
                         }
                     }
                 ],
@@ -249,37 +249,37 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Folder name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -331,13 +331,13 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -361,7 +361,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_link.CreateInput"
+                            "$ref": "#/definitions/link.CreateInput"
                         }
                     }
                 ],
@@ -369,31 +369,31 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Short code already in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -429,25 +429,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -481,19 +481,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -531,7 +531,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_link.UpdateInput"
+                            "$ref": "#/definitions/link.UpdateInput"
                         }
                     }
                 ],
@@ -539,31 +539,31 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -594,14 +594,14 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_tag.Tag"
+                                "$ref": "#/definitions/tag.Tag"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -629,7 +629,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.AddToLinkInput"
+                            "$ref": "#/definitions/tag.AddToLinkInput"
                         }
                     }
                 ],
@@ -640,19 +640,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -688,13 +688,13 @@
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -725,20 +725,20 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_tag.Tag"
+                                "$ref": "#/definitions/tag.Tag"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -762,7 +762,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.CreateInput"
+                            "$ref": "#/definitions/tag.CreateInput"
                         }
                     }
                 ],
@@ -770,31 +770,31 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Tag name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -830,25 +830,25 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -882,19 +882,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -932,7 +932,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.UpdateInput"
+                            "$ref": "#/definitions/tag.UpdateInput"
                         }
                     }
                 ],
@@ -940,37 +940,37 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Tag name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -999,13 +999,13 @@
                     "404": {
                         "description": "Link not found, inactive, or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -1013,7 +1013,7 @@
         }
     },
     "definitions": {
-        "github_com_execrc_betteroute_internal_errs.Error": {
+        "errs.Error": {
             "type": "object",
             "properties": {
                 "detail": {
@@ -1022,7 +1022,7 @@
                 "errors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.FieldError"
+                        "$ref": "#/definitions/errs.FieldError"
                     }
                 },
                 "instance": {
@@ -1045,7 +1045,7 @@
                 }
             }
         },
-        "github_com_execrc_betteroute_internal_errs.FieldError": {
+        "errs.FieldError": {
             "type": "object",
             "properties": {
                 "field": {
@@ -1056,7 +1056,7 @@
                 }
             }
         },
-        "internal_folder.CreateInput": {
+        "folder.CreateInput": {
             "type": "object",
             "required": [
                 "name",
@@ -1076,7 +1076,7 @@
                 }
             }
         },
-        "internal_folder.Folder": {
+        "folder.Folder": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1102,7 +1102,7 @@
                 }
             }
         },
-        "internal_folder.UpdateInput": {
+        "folder.UpdateInput": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1118,7 +1118,7 @@
                 }
             }
         },
-        "internal_link.CreateInput": {
+        "link.CreateInput": {
             "type": "object",
             "required": [
                 "dest_url",
@@ -1204,7 +1204,7 @@
                 }
             }
         },
-        "internal_link.Link": {
+        "link.Link": {
             "type": "object",
             "properties": {
                 "click_count": {
@@ -1300,7 +1300,7 @@
                 }
             }
         },
-        "internal_link.UpdateInput": {
+        "link.UpdateInput": {
             "type": "object",
             "properties": {
                 "description": {
@@ -1377,7 +1377,7 @@
                 }
             }
         },
-        "internal_tag.AddToLinkInput": {
+        "tag.AddToLinkInput": {
             "type": "object",
             "required": [
                 "tag_id"
@@ -1388,7 +1388,7 @@
                 }
             }
         },
-        "internal_tag.CreateInput": {
+        "tag.CreateInput": {
             "type": "object",
             "required": [
                 "name",
@@ -1408,7 +1408,7 @@
                 }
             }
         },
-        "internal_tag.Tag": {
+        "tag.Tag": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1431,7 +1431,7 @@
                 }
             }
         },
-        "internal_tag.UpdateInput": {
+        "tag.UpdateInput": {
             "type": "object",
             "properties": {
                 "color": {
