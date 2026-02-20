@@ -1,0 +1,186 @@
+// Package auth handles user authentication: registration, login,
+// session management, email verification, and password reset.
+package auth
+
+import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
+	"time"
+
+	"github.com/gofiber/fiber/v3"
+	"github.com/rs/xid"
+
+	"github.com/execrc/betteroute/internal/opt"
+)
+
+// Domain types.
+
+// User is an authenticated identity.
+type User struct {
+	ID              string     `json:"id"`
+	Name            string     `json:"name"`
+	Email           string     `json:"email"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at,omitempty"`
+	AvatarURL       string     `json:"avatar_url,omitempty"`
+	Status          string     `json:"status"`
+	OnboardedAt     *time.Time `json:"onboarded_at,omitempty"`
+	Timezone        string     `json:"timezone"`
+	LastLoginAt     *time.Time `json:"last_login_at,omitempty"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+}
+
+// Session represents an active user session.
+// Token holds the plain opaque value sent to the client once on creation — never persisted.
+// UserID, IPAddress, UserAgent are internal and excluded from JSON responses.
+type Session struct {
+	ID        string    `json:"id"`
+	UserID    string    `json:"-"`
+	Token     string    `json:"-"` // set on creation, written to cookie, cleared after
+	ExpiresAt time.Time `json:"-"` // set in cookie, not exposed in body
+	IPAddress string    `json:"-"`
+	UserAgent string    `json:"-"`
+	CreatedAt time.Time `json:"-"`
+}
+
+// Account links a user to an auth provider.
+// Internal auth plumbing — not exposed in API responses.
+type Account struct {
+	ID                string
+	UserID            string
+	Provider          string // "credential" | "google" | "github"
+	ProviderAccountID string
+	PasswordHash      string // non-empty only for provider = "credential"
+}
+
+// VerificationToken is a one-time token for email verification or password reset.
+// Internal auth plumbing — not exposed in API responses.
+// PlainToken is set before Insert, used by the store to compute and persist the hash.
+type VerificationToken struct {
+	ID         string
+	UserID     string
+	Email      string
+	PlainToken string // set by caller; store hashes before persisting
+	Type       string // "email_verification" | "password_reset"
+	ExpiresAt  time.Time
+	UsedAt     *time.Time
+	CreatedAt  time.Time
+}
+
+// SessionMeta carries server-derived HTTP metadata for session creation.
+// Extracted by the handler from the request — never user-supplied.
+type SessionMeta struct {
+	IPAddress string
+	UserAgent string
+}
+
+// Config holds configuration for the auth service and handler.
+type Config struct {
+	WebURL string // frontend URL — used in email links and post-OAuth redirects
+	APIURL string // this API's base URL — used for OAuth callback URLs
+
+	GoogleClientID     string
+	GoogleClientSecret string
+	GitHubClientID     string
+	GitHubClientSecret string
+}
+
+// Input types.
+
+// RegisterInput is the payload for creating a new account via email/password.
+type RegisterInput struct {
+	Name     string `json:"name"     validate:"required,min=1,max=100"`
+	Email    string `json:"email"    validate:"required,email,max=254"`
+	Password string `json:"password" validate:"required,min=8,max=72"`
+}
+
+// LoginInput is the payload for email/password sign-in.
+type LoginInput struct {
+	Email    string `json:"email"    validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
+
+// ForgotPasswordInput requests a password reset email.
+type ForgotPasswordInput struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// ResetPasswordInput completes a password reset.
+type ResetPasswordInput struct {
+	Token    string `json:"token"    validate:"required"`
+	Password string `json:"password" validate:"required,min=8,max=72"`
+}
+
+// VerifyEmailInput consumes an email verification token.
+type VerifyEmailInput struct {
+	Token string `json:"token" validate:"required"`
+}
+
+// ResendVerificationInput requests a new verification email.
+type ResendVerificationInput struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// UpdateProfileInput is the payload for updating the authenticated user's profile.
+type UpdateProfileInput struct {
+	Name      opt.Field[string]  `json:"name"       validate:"omitempty,min=1,max=100" swaggertype:"string"`
+	AvatarURL opt.Field[*string] `json:"avatar_url" validate:"omitempty,url,max=2048" swaggertype:"string"`
+	Timezone  opt.Field[string]  `json:"timezone"   validate:"omitempty,max=100" swaggertype:"string"`
+}
+
+// Context helpers.
+
+// UserFromContext returns the authenticated user set by the Auth middleware.
+// Returns nil if called outside an authenticated context.
+func UserFromContext(c fiber.Ctx) *User {
+	u, _ := c.Locals("user").(*User)
+	return u
+}
+
+// SessionFromContext returns the active session set by the Auth middleware.
+// Returns nil if called outside an authenticated context.
+func SessionFromContext(c fiber.Ctx) *Session {
+	s, _ := c.Locals("session").(*Session)
+	return s
+}
+
+// Sentinel errors.
+
+var (
+	ErrNotFound          = errors.New("user not found")
+	ErrEmailTaken        = errors.New("email already in use")
+	ErrInvalidCredential = errors.New("invalid email or password")
+	ErrSessionNotFound   = errors.New("session not found")
+	ErrTokenInvalid      = errors.New("token is invalid or expired")
+	ErrEmailUnverified   = errors.New("email not verified")
+	ErrAccountSuspended  = errors.New("account suspended")
+	ErrRateLimited       = errors.New("too many requests, try again later")
+	ErrOAuthUnavailable  = errors.New("oauth provider not configured")
+)
+
+// ID generators — prefixed for readability in logs and debugging.
+
+func newUserID() string    { return "usr_" + xid.New().String() }
+func newSessionID() string { return "ses_" + xid.New().String() }
+func newAccountID() string { return "acc_" + xid.New().String() }
+func newTokenID() string   { return "vtk_" + xid.New().String() }
+
+// generateToken creates a cryptographically secure opaque token.
+// Returns the plain token (sent to client / email) and its SHA-256 hash (stored in DB).
+func generateToken() (plain, hash string, err error) {
+	b := make([]byte, 32)
+	if _, err = rand.Read(b); err != nil {
+		return
+	}
+	plain = hex.EncodeToString(b) // 64-char hex string
+	hash = hashToken(plain)
+	return
+}
+
+// hashToken computes the SHA-256 hash of a plain token for DB lookup.
+func hashToken(plain string) string {
+	sum := sha256.Sum256([]byte(plain))
+	return hex.EncodeToString(sum[:])
+}
