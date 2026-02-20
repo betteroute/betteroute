@@ -30,11 +30,11 @@ tasks:
 
   # Build
   build:
-    script: "go build -ldflags \"-X ${LDFLAGS_VERSION}\" -o bin/api ./cmd/api"
+    script: "go build -ldflags \"-X ${LDFLAGS_VERSION}\" -o bin/betteroute ./cmd/betteroute"
     inputs:
       - "@group(sources)"
     outputs:
-      - "bin/api"
+      - "bin/betteroute"
     env:
       LDFLAGS_VERSION: "github.com/execrc/betteroute/internal/config.Version=${VERSION:-dev}"
 
@@ -53,7 +53,7 @@ tasks:
 
   # Docs
   docs:
-    command: "go tool swag init -g cmd/api/main.go -o internal/openapi --outputTypes json"
+    command: "go tool swag init -g cmd/betteroute/main.go -o internal/openapi --outputTypes json"
     inputs:
       - "@group(sources)"
     outputs:

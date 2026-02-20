@@ -16,16 +16,20 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/cors"
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/execrc/betteroute/internal/auth"
 	"github.com/execrc/betteroute/internal/config"
 	"github.com/execrc/betteroute/internal/db"
-	"github.com/execrc/betteroute/internal/docs"
 	"github.com/execrc/betteroute/internal/errs"
 	"github.com/execrc/betteroute/internal/folder"
 	"github.com/execrc/betteroute/internal/health"
 	"github.com/execrc/betteroute/internal/link"
+	"github.com/execrc/betteroute/internal/middleware"
+	"github.com/execrc/betteroute/internal/notify"
+	"github.com/execrc/betteroute/internal/notify/email"
 	"github.com/execrc/betteroute/internal/openapi"
 	"github.com/execrc/betteroute/internal/redirect"
 	"github.com/execrc/betteroute/internal/tag"
@@ -79,6 +83,12 @@ func run() error {
 	})
 
 	app.Use(recover.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{cfg.WebURL},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowCredentials: true,
+	}))
 
 	registerRoutes(app, cfg, logger, pool)
 
@@ -90,9 +100,29 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 	health.New(config.Version, pool).Register(app)
 
 	if cfg.IsDevelopment() {
-		docs.Register(app, openapi.Spec)
+		openapi.Register(app)
 		logger.Info("API docs available at /docs")
 	}
+
+	// Auth.
+	authStore := auth.NewStore(pool)
+
+	var notifier notify.Notifier
+	if cfg.EmailAPIKey != "" {
+		notifier = email.New(cfg.EmailAPIKey, cfg.EmailFrom)
+	} else {
+		notifier = notify.Log()
+	}
+
+	authSvc := auth.NewService(authStore, notifier, auth.Config{
+		WebURL:             cfg.WebURL,
+		APIURL:             cfg.APIURL,
+		GoogleClientID:     cfg.GoogleClientID,
+		GoogleClientSecret: cfg.GoogleClientSecret,
+		GitHubClientID:     cfg.GitHubClientID,
+		GitHubClientSecret: cfg.GitHubClientSecret,
+	})
+	authHandler := auth.NewHandler(authSvc, !cfg.IsDevelopment())
 
 	// Links.
 	linkStore := link.NewStore(pool)
@@ -109,8 +139,14 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 	tagSvc := tag.NewService(tagStore)
 	tagHandler := tag.NewHandler(tagSvc)
 
-	// API v1.
+	// Auth middleware — reused by auth handler and all API routes.
+	authMW := middleware.Auth(authSvc)
+
 	api := app.Group("/api/v1")
+	authHandler.Register(api, authMW)
+
+	// All remaining API routes require authentication.
+	api.Use(authMW)
 	linkHandler.Register(api)
 	folderHandler.Register(api)
 	tagHandler.Register(api)

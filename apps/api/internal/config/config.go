@@ -19,6 +19,20 @@ type Config struct {
 	Env         string `env:"APP_ENV"       envDefault:"development"`
 	Port        int    `env:"PORT"          envDefault:"8080"`
 	DatabaseURL string `env:"DATABASE_URL"  envDefault:"postgres://localhost:5432/betteroute?sslmode=disable"`
+
+	// URLs
+	APIURL string `env:"API_URL" envDefault:"http://localhost:8080"` // this server
+	WebURL string `env:"WEB_URL" envDefault:"http://localhost:3000"` // frontend
+
+	// Notifications
+	EmailAPIKey string `env:"EMAIL_API_KEY"`
+	EmailFrom   string `env:"EMAIL_FROM" envDefault:"Betteroute <onboarding@resend.dev>"`
+
+	// OAuth — leave blank to disable the provider
+	GoogleClientID     string `env:"GOOGLE_CLIENT_ID"`
+	GoogleClientSecret string `env:"GOOGLE_CLIENT_SECRET"`
+	GitHubClientID     string `env:"GITHUB_CLIENT_ID"`
+	GitHubClientSecret string `env:"GITHUB_CLIENT_SECRET"`
 }
 
 // Load parses environment variables into Config and validates the result.
