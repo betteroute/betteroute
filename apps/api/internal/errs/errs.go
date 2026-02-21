@@ -94,6 +94,19 @@ func Unauthorized(detail string) *Error {
 	}
 }
 
+// PaymentRequired creates a 402 error.
+func PaymentRequired(detail string) *Error {
+	if detail == "" {
+		detail = "Payment required to access this resource or feature"
+	}
+	return &Error{
+		Type:   baseURI + "/payment-required",
+		Title:  "Payment Required",
+		Status: http.StatusPaymentRequired,
+		Detail: detail,
+	}
+}
+
 // Forbidden creates a 403 error.
 func Forbidden(detail string) *Error {
 	if detail == "" {
