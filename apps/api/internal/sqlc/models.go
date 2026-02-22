@@ -5,6 +5,7 @@
 package sqlc
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -25,6 +26,8 @@ type ApiKey struct {
 	Name        string     `json:"name"`
 	KeyHash     string     `json:"key_hash"`
 	KeyPrefix   string     `json:"key_prefix"`
+	Permission  string     `json:"permission"`
+	Scopes      []string   `json:"scopes"`
 	ExpiresAt   *time.Time `json:"expires_at"`
 	LastUsedAt  *time.Time `json:"last_used_at"`
 	DeletedAt   *time.Time `json:"deleted_at"`
@@ -32,9 +35,17 @@ type ApiKey struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+type BillingWebhookEvent struct {
+	ID        string    `json:"id"`
+	Provider  string    `json:"provider"`
+	EventType string    `json:"event_type"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
 type Folder struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
+	CreatedBy   *string    `json:"created_by"`
 	Name        string     `json:"name"`
 	Color       string     `json:"color"`
 	Position    int32      `json:"position"`
@@ -46,6 +57,7 @@ type Folder struct {
 type Link struct {
 	ID               string     `json:"id"`
 	WorkspaceID      string     `json:"workspace_id"`
+	CreatedBy        *string    `json:"created_by"`
 	FolderID         *string    `json:"folder_id"`
 	ShortCode        string     `json:"short_code"`
 	DestUrl          string     `json:"dest_url"`
@@ -80,6 +92,21 @@ type LinkTag struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+type Plan struct {
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type PlanPrice struct {
+	PlanID   string `json:"plan_id"`
+	Provider string `json:"provider"`
+	Interval string `json:"interval"`
+	Currency string `json:"currency"`
+	PriceID  string `json:"price_id"`
+}
+
 type Session struct {
 	ID        string    `json:"id"`
 	UserID    string    `json:"user_id"`
@@ -91,9 +118,29 @@ type Session struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type Subscription struct {
+	WorkspaceID            string     `json:"workspace_id"`
+	PlanID                 string     `json:"plan_id"`
+	Provider               *string    `json:"provider"`
+	ProviderCustomerID     *string    `json:"provider_customer_id"`
+	ProviderSubscriptionID *string    `json:"provider_subscription_id"`
+	Currency               *string    `json:"currency"`
+	BillingInterval        *string    `json:"billing_interval"`
+	Status                 string     `json:"status"`
+	CurrentPeriodStart     *time.Time `json:"current_period_start"`
+	CurrentPeriodEnd       *time.Time `json:"current_period_end"`
+	CancelAtPeriodEnd      *bool      `json:"cancel_at_period_end"`
+	CanceledAt             *time.Time `json:"canceled_at"`
+	CustomQuotas           []byte     `json:"custom_quotas"`
+	CustomFeatures         []byte     `json:"custom_features"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
+}
+
 type Tag struct {
 	ID          string     `json:"id"`
 	WorkspaceID string     `json:"workspace_id"`
+	CreatedBy   *string    `json:"created_by"`
 	Name        string     `json:"name"`
 	Color       string     `json:"color"`
 	DeletedAt   *time.Time `json:"deleted_at"`
@@ -155,4 +202,21 @@ type WorkspaceMember struct {
 	InvitedBy   *string   `json:"invited_by"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+type WorkspaceUsage struct {
+	WorkspaceID      string          `json:"workspace_id"`
+	LinksUsage       int32           `json:"links_usage"`
+	ClicksUsage      int64           `json:"clicks_usage"`
+	DomainsActive    int32           `json:"domains_active"`
+	WebhooksActive   int32           `json:"webhooks_active"`
+	ApiKeysActive    int32           `json:"api_keys_active"`
+	MembersActive    int32           `json:"members_active"`
+	FoldersActive    int32           `json:"folders_active"`
+	TagsActive       int32           `json:"tags_active"`
+	OverQuota        json.RawMessage `json:"over_quota"`
+	UsagePeriodStart time.Time       `json:"usage_period_start"`
+	UsagePeriodEnd   time.Time       `json:"usage_period_end"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
 }
