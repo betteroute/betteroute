@@ -20,6 +20,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/recover"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/execrc/betteroute/internal/apikey"
 	"github.com/execrc/betteroute/internal/auth"
 	"github.com/execrc/betteroute/internal/config"
 	"github.com/execrc/betteroute/internal/db"
@@ -32,7 +33,9 @@ import (
 	"github.com/execrc/betteroute/internal/notify/email"
 	"github.com/execrc/betteroute/internal/openapi"
 	"github.com/execrc/betteroute/internal/redirect"
+	"github.com/execrc/betteroute/internal/sqlc"
 	"github.com/execrc/betteroute/internal/tag"
+	"github.com/execrc/betteroute/internal/workspace"
 )
 
 func main() {
@@ -86,7 +89,7 @@ func run() error {
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{cfg.WebURL},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		AllowCredentials: true,
 	}))
 
@@ -104,17 +107,17 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 		logger.Info("API docs available at /docs")
 	}
 
-	// Auth.
-	authStore := auth.NewStore(pool)
-
+	// Notifier.
 	var notifier notify.Notifier
 	if cfg.EmailAPIKey != "" {
 		notifier = email.New(cfg.EmailAPIKey, cfg.EmailFrom)
 	} else {
-		notifier = notify.Log()
+		notifier = notify.Nop()
+		logger.Warn("EMAIL_API_KEY not set, notifications will be dropped")
 	}
 
-	authSvc := auth.NewService(authStore, notifier, auth.Config{
+	// Services.
+	authSvc := auth.NewService(auth.NewStore(pool), notifier, auth.Config{
 		WebURL:             cfg.WebURL,
 		APIURL:             cfg.APIURL,
 		GoogleClientID:     cfg.GoogleClientID,
@@ -122,40 +125,48 @@ func registerRoutes(app *fiber.App, cfg *config.Config, logger *slog.Logger, poo
 		GitHubClientID:     cfg.GitHubClientID,
 		GitHubClientSecret: cfg.GitHubClientSecret,
 	})
+	wsSvc := workspace.NewService(workspace.NewStore(pool), notifier, cfg.WebURL)
+	linkSvc := link.NewService(link.NewStore(pool))
+	folderSvc := folder.NewService(folder.NewStore(pool))
+	tagSvc := tag.NewService(tag.NewStore(pool))
+	apikeySvc := apikey.NewService(apikey.NewStore(pool))
+	redirectSvc := redirect.NewService(pool)
+
+	// Middleware.
+	authMW := middleware.Auth(authSvc, apikeySvc)
+	workspaceMW := middleware.Workspace(wsSvc)
+	entitlementMW := middleware.Entitlement(sqlc.New(pool))
+
+	// Handlers.
 	authHandler := auth.NewHandler(authSvc, !cfg.IsDevelopment())
-
-	// Links.
-	linkStore := link.NewStore(pool)
-	linkSvc := link.NewService(linkStore)
-	linkHandler := link.NewHandler(linkSvc)
-
-	// Folders.
-	folderStore := folder.NewStore(pool)
-	folderSvc := folder.NewService(folderStore)
+	wsHandler := workspace.NewHandler(wsSvc)
+	linkHandler := link.NewHandler(linkSvc, tagSvc)
 	folderHandler := folder.NewHandler(folderSvc)
-
-	// Tags.
-	tagStore := tag.NewStore(pool)
-	tagSvc := tag.NewService(tagStore)
 	tagHandler := tag.NewHandler(tagSvc)
+	apikeyHandler := apikey.NewHandler(apikeySvc)
 
-	// Auth middleware — reused by auth handler and all API routes.
-	authMW := middleware.Auth(authSvc)
-
+	// Routes.
+	//
+	// Middleware chain per workspace-scoped request:
+	//   Auth → Workspace → Entitlement → Handler
+	//
+	// Authorization (role, scope, quota, feature) is checked inside each
+	// handler method via the guard package — not via per-route middleware.
 	api := app.Group("/api/v1")
 	authHandler.Register(api, authMW)
 
-	// All remaining API routes require authentication.
 	api.Use(authMW)
-	linkHandler.Register(api)
-	folderHandler.Register(api)
-	tagHandler.Register(api)
 
-	// Tag-link association routes: /api/v1/links/:id/tags
-	tagHandler.RegisterLinkRoutes(api.Group("/links"))
+	wsHandler.Register(api, workspaceMW, entitlementMW)
+
+	ws := api.Group("/workspaces/:slug", workspaceMW, entitlementMW)
+
+	linkHandler.Register(ws.Group("/links"))
+	folderHandler.Register(ws.Group("/folders"))
+	tagHandler.Register(ws.Group("/tags"))
+	apikeyHandler.Register(ws.Group("/api-keys"))
 
 	// Redirect — catch-all, registered last.
-	redirectSvc := redirect.NewService(pool)
 	redirect.NewHandler(redirectSvc).Register(app)
 
 	logger.Debug("routes registered")
