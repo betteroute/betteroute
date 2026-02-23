@@ -3,19 +3,17 @@
 package auth
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"time"
 
-	"github.com/gofiber/fiber/v3"
 	"github.com/rs/xid"
 
 	"github.com/execrc/betteroute/internal/opt"
 )
-
-// Domain types.
 
 // User is an authenticated identity.
 type User struct {
@@ -87,8 +85,6 @@ type Config struct {
 	GitHubClientSecret string
 }
 
-// Input types.
-
 // RegisterInput is the payload for creating a new account via email/password.
 type RegisterInput struct {
 	Name     string `json:"name"     validate:"required,min=1,max=100"`
@@ -130,25 +126,31 @@ type UpdateProfileInput struct {
 	Timezone  opt.Field[string]  `json:"timezone"   validate:"omitempty,max=100" swaggertype:"string"`
 }
 
-// Context helpers.
-
-// UserFromContext returns the authenticated user set by the Auth middleware.
-// Returns nil if called outside an authenticated context.
-func UserFromContext(c fiber.Ctx) *User {
-	u, _ := c.Locals("user").(*User)
-	return u
+// Context bundles the authenticated user and their active session.
+// Injected by the Auth middleware.
+type Context struct {
+	User    *User
+	Session *Session
 }
 
-// SessionFromContext returns the active session set by the Auth middleware.
-// Returns nil if called outside an authenticated context.
-func SessionFromContext(c fiber.Ctx) *Session {
-	s, _ := c.Locals("session").(*Session)
-	return s
+type contextKey struct{}
+
+// NewContext returns a copy of parent with the auth Context attached.
+func NewContext(parent context.Context, actx Context) context.Context {
+	return context.WithValue(parent, contextKey{}, actx)
+}
+
+// FromContext extracts the authenticated context.
+// Returns a zero Context outside authenticated routes.
+func FromContext(ctx context.Context) Context {
+	actx, _ := ctx.Value(contextKey{}).(Context)
+	return actx
 }
 
 // Sentinel errors.
 
 var (
+	// ErrNotFound is returned when a requested user or resource does not exist.
 	ErrNotFound          = errors.New("user not found")
 	ErrEmailTaken        = errors.New("email already in use")
 	ErrInvalidCredential = errors.New("invalid email or password")

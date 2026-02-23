@@ -1,3 +1,4 @@
+// Package redirect handles resolving short codes to their destination URLs.
 package redirect
 
 import (
@@ -38,9 +39,6 @@ func (h *Handler) Register(r fiber.Router) {
 	r.Get("/:code", h.Redirect)
 }
 
-// Redirect resolves a short code and issues a 302 redirect.
-// Social crawlers receive an HTML page with OG meta tags instead.
-//
 // @Summary     Redirect short link
 // @Description Resolves a short code and redirects to the destination URL.
 // @Tags        redirect
@@ -84,7 +82,7 @@ func (h *Handler) mapError(err error) error {
 		errors.Is(err, ErrExpired),
 		errors.Is(err, ErrNotStarted),
 		errors.Is(err, ErrClickLimitReached):
-		return errs.NotFound("Link", "")
+		return errs.NotFound("link", "")
 	default:
 		return errs.Internal("").WithCause(err)
 	}

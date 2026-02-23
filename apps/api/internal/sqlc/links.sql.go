@@ -23,7 +23,7 @@ func (q *Queries) CountLinksByWorkspace(ctx context.Context, workspaceID string)
 }
 
 const findLinkByID = `-- name: FindLinkByID :one
-SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 LIMIT 1
 `
@@ -39,6 +39,7 @@ func (q *Queries) FindLinkByID(ctx context.Context, arg FindLinkByIDParams) (Lin
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
@@ -70,7 +71,7 @@ func (q *Queries) FindLinkByID(ctx context.Context, arg FindLinkByIDParams) (Lin
 }
 
 const findLinkByShortCode = `-- name: FindLinkByShortCode :one
-SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE short_code = $1 AND deleted_at IS NULL
 LIMIT 1
 `
@@ -82,6 +83,7 @@ func (q *Queries) FindLinkByShortCode(ctx context.Context, shortCode string) (Li
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
@@ -144,25 +146,25 @@ func (q *Queries) FindRedirectFallback(ctx context.Context, shortCode string) (F
 }
 
 const insertLink = `-- name: InsertLink :one
-
 INSERT INTO links (
-    id, workspace_id, folder_id, short_code, dest_url, title, description,
+    id, workspace_id, created_by, folder_id, short_code, dest_url, title, description,
     starts_at, expires_at, expiration_url, max_clicks,
     utm_source, utm_medium, utm_campaign, utm_term, utm_content,
     og_title, og_description, og_image,
     notes, created_via
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11,
-    $12, $13, $14, $15, $16,
-    $17, $18, $19,
-    $20, $21
-) RETURNING id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12,
+    $13, $14, $15, $16, $17,
+    $18, $19, $20,
+    $21, $22
+) RETURNING id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
 `
 
 type InsertLinkParams struct {
 	ID            string     `json:"id"`
 	WorkspaceID   string     `json:"workspace_id"`
+	CreatedBy     *string    `json:"created_by"`
 	FolderID      *string    `json:"folder_id"`
 	ShortCode     string     `json:"short_code"`
 	DestUrl       string     `json:"dest_url"`
@@ -184,11 +186,11 @@ type InsertLinkParams struct {
 	CreatedVia    string     `json:"created_via"`
 }
 
-// Link queries
 func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, error) {
 	row := q.db.QueryRow(ctx, insertLink,
 		arg.ID,
 		arg.WorkspaceID,
+		arg.CreatedBy,
 		arg.FolderID,
 		arg.ShortCode,
 		arg.DestUrl,
@@ -213,6 +215,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.FolderID,
 		&i.ShortCode,
 		&i.DestUrl,
@@ -244,7 +247,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 }
 
 const listLinksByWorkspace = `-- name: ListLinksByWorkspace :many
-SELECT id, workspace_id, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -268,6 +271,7 @@ func (q *Queries) ListLinksByWorkspace(ctx context.Context, arg ListLinksByWorks
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
+			&i.CreatedBy,
 			&i.FolderID,
 			&i.ShortCode,
 			&i.DestUrl,

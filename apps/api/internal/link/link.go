@@ -10,12 +10,11 @@ import (
 	"github.com/execrc/betteroute/internal/opt"
 )
 
-// Domain type.
-
 // Link represents a shortened URL belonging to a workspace.
 type Link struct {
 	ID          string `json:"id"`
 	WorkspaceID string `json:"workspace_id"`
+	CreatedBy   string `json:"created_by,omitempty"`
 	FolderID    string `json:"folder_id,omitempty"`
 	ShortCode   string `json:"short_code"`
 	ShortURL    string `json:"short_url"`
@@ -58,11 +57,9 @@ type Link struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Input types.
-
 // CreateInput is the input for creating a new link.
+// WorkspaceID is securely injected by middleware.
 type CreateInput struct {
-	WorkspaceID string `json:"workspace_id" validate:"required"`
 	FolderID    string `json:"folder_id"    validate:"omitempty"`
 	DestURL     string `json:"dest_url"     validate:"required,url,max=2048"`
 	ShortCode   string `json:"short_code"   validate:"omitempty,min=1,max=50,shortcode"`
@@ -126,14 +123,10 @@ type UpdateInput struct {
 	Notes opt.Field[*string] `json:"notes" validate:"omitempty,max=5000" swaggertype:"string"`
 }
 
-// Sentinel errors.
-
 var (
 	ErrNotFound       = errors.New("link not found")
 	ErrShortCodeTaken = errors.New("short code already in use")
 )
-
-// Short code generation.
 
 const (
 	alphabet     = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

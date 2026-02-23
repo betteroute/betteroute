@@ -8,12 +8,11 @@ import (
 	"github.com/execrc/betteroute/internal/opt"
 )
 
-// Domain type.
-
 // Folder represents a workspace folder for organizing links.
 type Folder struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`
+	CreatedBy   string    `json:"created_by,omitempty"`
 	Name        string    `json:"name"`
 	Color       string    `json:"color"`
 	Position    int       `json:"position"`
@@ -21,13 +20,11 @@ type Folder struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// Input types.
-
 // CreateInput is the input for creating a folder.
+// WorkspaceID is omitted because it is securely inferred from the route middleware.
 type CreateInput struct {
-	WorkspaceID string `json:"workspace_id" validate:"required"`
-	Name        string `json:"name"         validate:"required,min=1,max=100"`
-	Color       string `json:"color"        validate:"omitempty,hexcolor,len=7"`
+	Name  string `json:"name"         validate:"required,min=1,max=100"`
+	Color string `json:"color"        validate:"omitempty,hexcolor,len=7"`
 }
 
 // UpdateInput is the input for partially updating a folder.
@@ -36,8 +33,6 @@ type UpdateInput struct {
 	Color    opt.Field[string] `json:"color"    validate:"omitempty,hexcolor,len=7" swaggertype:"string"`
 	Position opt.Field[*int32] `json:"position" swaggertype:"integer"`
 }
-
-// Sentinel errors.
 
 var (
 	ErrNotFound  = errors.New("folder not found")

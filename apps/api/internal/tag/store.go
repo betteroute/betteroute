@@ -9,10 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/execrc/betteroute/internal/db"
+	"github.com/execrc/betteroute/internal/ptr"
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Store handles tag database operations.
+// Store handles database operations for the tag package.
 type Store struct {
 	q    *sqlc.Queries
 	pool *pgxpool.Pool
@@ -23,10 +24,12 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
+// Insert creates a new tag record.
 func (s *Store) Insert(ctx context.Context, t *Tag) (*Tag, error) {
 	row, err := s.q.InsertTag(ctx, sqlc.InsertTagParams{
 		ID:          t.ID,
 		WorkspaceID: t.WorkspaceID,
+		CreatedBy:   ptr.ToNonZero(t.CreatedBy),
 		Name:        t.Name,
 		Color:       t.Color,
 	})
@@ -39,6 +42,7 @@ func (s *Store) Insert(ctx context.Context, t *Tag) (*Tag, error) {
 	return toTag(row), nil
 }
 
+// FindByID retrieves a single tag by ID.
 func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*Tag, error) {
 	row, err := s.q.FindTagByID(ctx, sqlc.FindTagByIDParams{
 		ID:          id,
@@ -53,6 +57,7 @@ func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*Tag, err
 	return toTag(row), nil
 }
 
+// List retrieves all active tags for a workspace.
 func (s *Store) List(ctx context.Context, workspaceID string) ([]Tag, error) {
 	rows, err := s.q.ListTagsByWorkspace(ctx, workspaceID)
 	if err != nil {
@@ -66,6 +71,7 @@ func (s *Store) List(ctx context.Context, workspaceID string) ([]Tag, error) {
 	return tags, nil
 }
 
+// Update partially updates a tag.
 func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Tag, error) {
 	var u db.Update
 
@@ -95,6 +101,7 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 	return toTag(row), nil
 }
 
+// SoftDelete marks a tag as deleted.
 func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	rows, err := s.q.SoftDeleteTag(ctx, sqlc.SoftDeleteTagParams{
 		ID:          id,
@@ -109,6 +116,7 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	return nil
 }
 
+// AddToLink associates a tag with a link.
 func (s *Store) AddToLink(ctx context.Context, linkID, tagID string) error {
 	if err := s.q.AddTagToLink(ctx, sqlc.AddTagToLinkParams{
 		LinkID: linkID,
@@ -119,6 +127,7 @@ func (s *Store) AddToLink(ctx context.Context, linkID, tagID string) error {
 	return nil
 }
 
+// RemoveFromLink removes a tag association from a link.
 func (s *Store) RemoveFromLink(ctx context.Context, linkID, tagID string) error {
 	rows, err := s.q.RemoveTagFromLink(ctx, sqlc.RemoveTagFromLinkParams{
 		LinkID: linkID,
@@ -133,6 +142,7 @@ func (s *Store) RemoveFromLink(ctx context.Context, linkID, tagID string) error 
 	return nil
 }
 
+// ListByLink retrieves all active tags associated with a specific link.
 func (s *Store) ListByLink(ctx context.Context, linkID string) ([]Tag, error) {
 	rows, err := s.q.ListTagsByLink(ctx, linkID)
 	if err != nil {
@@ -146,11 +156,11 @@ func (s *Store) ListByLink(ctx context.Context, linkID string) ([]Tag, error) {
 	return tags, nil
 }
 
-// toTag maps a sqlc.Tag to a domain Tag.
 func toTag(row sqlc.Tag) *Tag {
 	return &Tag{
 		ID:          row.ID,
 		WorkspaceID: row.WorkspaceID,
+		CreatedBy:   ptr.From(row.CreatedBy),
 		Name:        row.Name,
 		Color:       row.Color,
 		CreatedAt:   row.CreatedAt,

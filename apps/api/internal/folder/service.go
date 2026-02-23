@@ -8,7 +8,7 @@ import (
 
 const defaultColor = "#6366f1"
 
-// Service handles folder business logic.
+// Service implements folder business logic.
 type Service struct {
 	store *Store
 }
@@ -19,7 +19,7 @@ func NewService(store *Store) *Service {
 }
 
 // Create persists a new folder.
-func (s *Service) Create(ctx context.Context, input CreateInput) (*Folder, error) {
+func (s *Service) Create(ctx context.Context, workspaceID, userID string, input CreateInput) (*Folder, error) {
 	color := input.Color
 	if color == "" {
 		color = defaultColor
@@ -27,7 +27,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Folder, error
 
 	f := &Folder{
 		ID:          "fld_" + xid.New().String(),
-		WorkspaceID: input.WorkspaceID,
+		WorkspaceID: workspaceID,
+		CreatedBy:   userID,
 		Name:        input.Name,
 		Color:       color,
 	}

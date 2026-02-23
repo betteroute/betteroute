@@ -19,3 +19,15 @@ func ToNonZero[T comparable](v T) *T {
 	}
 	return &v
 }
+
+// ToInt32 safely converts an int to an int32, clamping if it overflows.
+// Useful for dealing with sqlc-generated types without triggering gosec G115.
+func ToInt32(v int) int32 {
+	if v > 2147483647 { // math.MaxInt32
+		return 2147483647
+	}
+	if v < -2147483648 { // math.MinInt32
+		return -2147483648
+	}
+	return int32(v)
+}

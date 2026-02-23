@@ -1,18 +1,16 @@
--- Link queries
-
 -- name: InsertLink :one
 INSERT INTO links (
-    id, workspace_id, folder_id, short_code, dest_url, title, description,
+    id, workspace_id, created_by, folder_id, short_code, dest_url, title, description,
     starts_at, expires_at, expiration_url, max_clicks,
     utm_source, utm_medium, utm_campaign, utm_term, utm_content,
     og_title, og_description, og_image,
     notes, created_via
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7,
-    $8, $9, $10, $11,
-    $12, $13, $14, $15, $16,
-    $17, $18, $19,
-    $20, $21
+    $1, $2, $3, $4, $5, $6, $7, $8,
+    $9, $10, $11, $12,
+    $13, $14, $15, $16, $17,
+    $18, $19, $20,
+    $21, $22
 ) RETURNING *;
 
 -- name: FindLinkByID :one

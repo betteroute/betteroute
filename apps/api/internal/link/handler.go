@@ -7,55 +7,62 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 
+	"github.com/execrc/betteroute/internal/apikey"
+	"github.com/execrc/betteroute/internal/auth"
+	"github.com/execrc/betteroute/internal/entitlement"
 	"github.com/execrc/betteroute/internal/errs"
+	"github.com/execrc/betteroute/internal/guard"
 	"github.com/execrc/betteroute/internal/page"
+	"github.com/execrc/betteroute/internal/rbac"
+	"github.com/execrc/betteroute/internal/tag"
 	"github.com/execrc/betteroute/internal/validate"
 )
 
 // Handler handles link HTTP requests.
 type Handler struct {
-	svc *Service
+	svc    *Service
+	tagSvc *tag.Service
 }
 
 // NewHandler creates a new link handler.
-func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+func NewHandler(svc *Service, tagSvc *tag.Service) *Handler {
+	return &Handler{svc: svc, tagSvc: tagSvc}
 }
 
-// Register mounts link CRUD routes on the given router.
+// Register mounts link CRUD and sub-resource routes on the given router.
 func (h *Handler) Register(r fiber.Router) {
-	links := r.Group("/links")
-	links.Get("/", h.List)
-	links.Get("/:id", h.Get)
-	links.Post("/", h.Create)
-	links.Patch("/:id", h.Update)
-	links.Delete("/:id", h.Delete)
+	r.Get("/", h.List)
+	r.Get("/:id", h.Get)
+	r.Post("/", h.Create)
+	r.Patch("/:id", h.Update)
+	r.Delete("/:id", h.Delete)
+
+	// Tag associations: /workspaces/:slug/links/:id/tags
+	r.Get("/:id/tags", h.ListTags)
+	r.Post("/:id/tags", h.AddTag)
+	r.Delete("/:id/tags/:tag_id", h.RemoveTag)
 }
 
-// List returns paginated links for a workspace.
-//
 // @Summary     List links
 // @Description Returns a paginated list of links for a workspace.
 // @Tags        links
-// @Accept      json
 // @Produce     json
-// @Param       workspace_id query    string true  "Workspace ID"
-// @Param       page         query    int    false "Page number"     default(1)
-// @Param       per_page     query    int    false "Items per page"  default(20)
+// @Param       page     query int    false "Page number"    default(1)
+// @Param       per_page query int    false "Items per page" default(20)
 // @Success     200 {object} object "Paginated list of links"
 // @Failure     400 {object} errs.Error
 // @Failure     500 {object} errs.Error
-// @Router      /api/v1/links [get]
+// @Router      /api/v1/workspaces/{slug}/links [get]
 func (h *Handler) List(c fiber.Ctx) error {
-	wsID := c.Query("workspace_id")
-	if wsID == "" {
-		return errs.BadRequest("workspace_id is required")
+	ctx := c.Context()
+	if err := guard.Scope(ctx, rbac.ScopeLinksRead); err != nil {
+		return err
 	}
 
 	pg, perPg := page.Normalize(parseQueryInt(c, "page"), parseQueryInt(c, "per_page"))
 	offset := page.Offset(pg, perPg)
 
-	links, total, err := h.svc.List(c.Context(), wsID, perPg, offset)
+	links, total, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID, perPg, offset)
 	if err != nil {
 		return h.mapError(err)
 	}
@@ -63,26 +70,22 @@ func (h *Handler) List(c fiber.Ctx) error {
 	return c.JSON(page.NewList(links, pg, perPg, total))
 }
 
-// Get returns a single link by ID.
-//
 // @Summary     Get link
 // @Description Returns a single link by ID within a workspace.
 // @Tags        links
 // @Produce     json
-// @Param       id           path  string true "Link ID"
-// @Param       workspace_id query string true "Workspace ID"
+// @Param       id path string true "Link ID"
 // @Success     200 {object} Link
-// @Failure     400 {object} errs.Error
 // @Failure     404 {object} errs.Error
 // @Failure     500 {object} errs.Error
-// @Router      /api/v1/links/{id} [get]
+// @Router      /api/v1/workspaces/{slug}/links/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
-	wsID := c.Query("workspace_id")
-	if wsID == "" {
-		return errs.BadRequest("workspace_id is required")
+	ctx := c.Context()
+	if err := guard.Scope(ctx, rbac.ScopeLinksRead); err != nil {
+		return err
 	}
 
-	l, err := h.svc.Get(c.Context(), c.Params("id"), wsID)
+	l, err := h.svc.Get(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
 		return h.mapError(err)
 	}
@@ -90,8 +93,6 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	return c.JSON(l)
 }
 
-// Create creates a new link.
-//
 // @Summary     Create link
 // @Description Creates a new short link in the workspace.
 // @Tags        links
@@ -100,11 +101,23 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Param       body body     CreateInput true "Link input"
 // @Success     201  {object} Link
 // @Failure     400  {object} errs.Error
+// @Failure     402  {object} errs.Error "Quota exceeded"
 // @Failure     409  {object} errs.Error "Short code already in use"
 // @Failure     422  {object} errs.Error "Validation failed"
 // @Failure     500  {object} errs.Error
-// @Router      /api/v1/links [post]
+// @Router      /api/v1/workspaces/{slug}/links [post]
 func (h *Handler) Create(c fiber.Ctx) error {
+	ctx := c.Context()
+	if err := guard.Role(ctx, rbac.Member); err != nil {
+		return err
+	}
+	if err := guard.Scope(ctx, rbac.ScopeLinksWrite); err != nil {
+		return err
+	}
+	if err := guard.Quota(ctx, entitlement.QuotaLinks, 1); err != nil {
+		return err
+	}
+
 	var input CreateInput
 	if err := c.Bind().JSON(&input); err != nil {
 		return errs.BadRequest("invalid request body")
@@ -114,7 +127,13 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	l, err := h.svc.Create(c.Context(), input)
+	userID := auth.FromContext(ctx).User.ID
+	createdVia := "web"
+	if apikey.FromContext(ctx) != nil {
+		createdVia = "api"
+	}
+
+	l, err := h.svc.Create(ctx, rbac.FromContext(ctx).WorkspaceID, userID, createdVia, input)
 	if err != nil {
 		return h.mapError(err)
 	}
@@ -122,26 +141,26 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(l)
 }
 
-// Update partially updates a link.
-//
 // @Summary     Update link
 // @Description Partially updates a link. Only provided fields are changed.
 // @Tags        links
 // @Accept      json
 // @Produce     json
-// @Param       id           path  string      true "Link ID"
-// @Param       workspace_id query string      true "Workspace ID"
-// @Param       body         body  UpdateInput true "Fields to update"
+// @Param       id   path string      true "Link ID"
+// @Param       body body UpdateInput  true "Fields to update"
 // @Success     200 {object} Link
 // @Failure     400 {object} errs.Error
 // @Failure     404 {object} errs.Error
 // @Failure     422 {object} errs.Error "Validation failed"
 // @Failure     500 {object} errs.Error
-// @Router      /api/v1/links/{id} [patch]
+// @Router      /api/v1/workspaces/{slug}/links/{id} [patch]
 func (h *Handler) Update(c fiber.Ctx) error {
-	wsID := c.Query("workspace_id")
-	if wsID == "" {
-		return errs.BadRequest("workspace_id is required")
+	ctx := c.Context()
+	if err := guard.Role(ctx, rbac.Member); err != nil {
+		return err
+	}
+	if err := guard.Scope(ctx, rbac.ScopeLinksWrite); err != nil {
+		return err
 	}
 
 	var input UpdateInput
@@ -153,7 +172,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	l, err := h.svc.Update(c.Context(), c.Params("id"), wsID, input)
+	l, err := h.svc.Update(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID, input)
 	if err != nil {
 		return h.mapError(err)
 	}
@@ -161,26 +180,108 @@ func (h *Handler) Update(c fiber.Ctx) error {
 	return c.JSON(l)
 }
 
-// Delete soft-deletes a link.
-//
 // @Summary     Delete link
 // @Description Soft-deletes a link. The link is not permanently removed.
 // @Tags        links
-// @Param       id           path  string true "Link ID"
-// @Param       workspace_id query string true "Workspace ID"
-// @Success     204          "No Content"
-// @Failure     400 {object} errs.Error
+// @Param       id path string true "Link ID"
+// @Success     204 "No Content"
 // @Failure     404 {object} errs.Error
 // @Failure     500 {object} errs.Error
-// @Router      /api/v1/links/{id} [delete]
+// @Router      /api/v1/workspaces/{slug}/links/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
-	wsID := c.Query("workspace_id")
-	if wsID == "" {
-		return errs.BadRequest("workspace_id is required")
+	ctx := c.Context()
+	if err := guard.Role(ctx, rbac.Member); err != nil {
+		return err
+	}
+	if err := guard.Scope(ctx, rbac.ScopeLinksWrite); err != nil {
+		return err
 	}
 
-	if err := h.svc.Delete(c.Context(), c.Params("id"), wsID); err != nil {
+	if err := h.svc.Delete(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID); err != nil {
 		return h.mapError(err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// @Summary     List tags for link
+// @Description Returns all tags associated with a link.
+// @Tags        links
+// @Produce     json
+// @Param       id path string true "Link ID"
+// @Success     200 {array} tag.Tag
+// @Failure     500 {object} errs.Error
+// @Router      /api/v1/workspaces/{slug}/links/{id}/tags [get]
+func (h *Handler) ListTags(c fiber.Ctx) error {
+	ctx := c.Context()
+	if err := guard.Scope(ctx, rbac.ScopeTagsRead); err != nil {
+		return err
+	}
+
+	tags, err := h.tagSvc.ListByLink(ctx, c.Params("id"))
+	if err != nil {
+		return errs.Internal("").WithCause(err)
+	}
+
+	return c.JSON(tags)
+}
+
+// @Summary     Add tag to link
+// @Description Associates a tag with a link. Idempotent — no error if already associated.
+// @Tags        links
+// @Accept      json
+// @Param       id   path string          true "Link ID"
+// @Param       body body tag.AddToLinkInput true "Tag to associate"
+// @Success     204  "No Content"
+// @Failure     400 {object} errs.Error
+// @Failure     422 {object} errs.Error "Validation failed"
+// @Failure     500 {object} errs.Error
+// @Router      /api/v1/workspaces/{slug}/links/{id}/tags [post]
+func (h *Handler) AddTag(c fiber.Ctx) error {
+	ctx := c.Context()
+	if err := guard.Role(ctx, rbac.Member); err != nil {
+		return err
+	}
+	if err := guard.Scope(ctx, rbac.ScopeTagsWrite); err != nil {
+		return err
+	}
+
+	var input tag.AddToLinkInput
+	if err := c.Bind().JSON(&input); err != nil {
+		return errs.BadRequest("invalid request body")
+	}
+
+	if fieldErrs := validate.Struct(input); fieldErrs != nil {
+		return errs.Validation(fieldErrs)
+	}
+
+	if err := h.tagSvc.AddToLink(ctx, c.Params("id"), input.TagID); err != nil {
+		return errs.Internal("").WithCause(err)
+	}
+
+	return c.SendStatus(fiber.StatusNoContent)
+}
+
+// @Summary     Remove tag from link
+// @Description Removes a tag association from a link.
+// @Tags        links
+// @Param       id     path string true "Link ID"
+// @Param       tag_id path string true "Tag ID"
+// @Success     204    "No Content"
+// @Failure     404 {object} errs.Error
+// @Failure     500 {object} errs.Error
+// @Router      /api/v1/workspaces/{slug}/links/{id}/tags/{tag_id} [delete]
+func (h *Handler) RemoveTag(c fiber.Ctx) error {
+	ctx := c.Context()
+	if err := guard.Role(ctx, rbac.Member); err != nil {
+		return err
+	}
+	if err := guard.Scope(ctx, rbac.ScopeTagsWrite); err != nil {
+		return err
+	}
+
+	if err := h.tagSvc.RemoveFromLink(ctx, c.Params("id"), c.Params("tag_id")); err != nil {
+		return errs.Internal("").WithCause(err)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
@@ -190,7 +291,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 func (h *Handler) mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		return errs.NotFound("Link", "")
+		return errs.NotFound("link", "")
 	case errors.Is(err, ErrShortCodeTaken):
 		return errs.Conflict("short code already in use")
 	default:

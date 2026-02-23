@@ -13,7 +13,7 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Store handles auth database operations.
+// Store handles database operations for the auth package.
 type Store struct {
 	q    *sqlc.Queries
 	pool *pgxpool.Pool
@@ -24,6 +24,7 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
+// InsertUser creates a new user record.
 func (s *Store) InsertUser(ctx context.Context, u *User) (*User, error) {
 	row, err := s.q.InsertUser(ctx, sqlc.InsertUserParams{
 		ID:        u.ID,
@@ -31,15 +32,16 @@ func (s *Store) InsertUser(ctx context.Context, u *User) (*User, error) {
 		Email:     u.Email, // service normalizes to lowercase before insert
 		AvatarUrl: ptr.ToNonZero(u.AvatarURL),
 	})
-	if db.IsUniqueViolation(err) {
-		return nil, ErrEmailTaken
-	}
 	if err != nil {
+		if db.IsUniqueViolation(err) {
+			return nil, ErrEmailTaken
+		}
 		return nil, fmt.Errorf("inserting user: %w", err)
 	}
 	return toUser(row), nil
 }
 
+// FindUserByID retrieves a user by their ID.
 func (s *Store) FindUserByID(ctx context.Context, id string) (*User, error) {
 	row, err := s.q.FindUserByID(ctx, id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -51,6 +53,7 @@ func (s *Store) FindUserByID(ctx context.Context, id string) (*User, error) {
 	return toUser(row), nil
 }
 
+// FindUserByEmail retrieves a user by their email address.
 func (s *Store) FindUserByEmail(ctx context.Context, email string) (*User, error) {
 	row, err := s.q.FindUserByEmail(ctx, email)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -62,6 +65,7 @@ func (s *Store) FindUserByEmail(ctx context.Context, email string) (*User, error
 	return toUser(row), nil
 }
 
+// UpdateUserEmailVerified marks a user's email as verified.
 func (s *Store) UpdateUserEmailVerified(ctx context.Context, userID string) error {
 	if err := s.q.UpdateUserEmailVerified(ctx, userID); err != nil {
 		return fmt.Errorf("verifying email for user %s: %w", userID, err)
@@ -69,6 +73,7 @@ func (s *Store) UpdateUserEmailVerified(ctx context.Context, userID string) erro
 	return nil
 }
 
+// UpdateUserLastLogin updates the user's last login timestamp.
 func (s *Store) UpdateUserLastLogin(ctx context.Context, userID string) error {
 	if err := s.q.UpdateUserLastLogin(ctx, userID); err != nil {
 		return fmt.Errorf("updating last login for user %s: %w", userID, err)
@@ -76,6 +81,7 @@ func (s *Store) UpdateUserLastLogin(ctx context.Context, userID string) error {
 	return nil
 }
 
+// UpdateUserProfile partially updates a user's profile information.
 func (s *Store) UpdateUserProfile(ctx context.Context, userID string, input UpdateProfileInput) (*User, error) {
 	var u db.Update
 
@@ -105,6 +111,7 @@ func (s *Store) UpdateUserProfile(ctx context.Context, userID string, input Upda
 	return toUser(row), nil
 }
 
+// InsertAccount creates a new authentication account (password or OAuth).
 func (s *Store) InsertAccount(ctx context.Context, a *Account) (*Account, error) {
 	row, err := s.q.InsertAccount(ctx, sqlc.InsertAccountParams{
 		ID:                a.ID,
@@ -119,6 +126,7 @@ func (s *Store) InsertAccount(ctx context.Context, a *Account) (*Account, error)
 	return toAccount(row), nil
 }
 
+// FindAccountByProvider retrieves an account by its OAuth provider and provider ID.
 func (s *Store) FindAccountByProvider(ctx context.Context, provider, providerAccountID string) (*Account, error) {
 	row, err := s.q.FindAccountByProvider(ctx, sqlc.FindAccountByProviderParams{
 		Provider:          provider,
@@ -133,6 +141,7 @@ func (s *Store) FindAccountByProvider(ctx context.Context, provider, providerAcc
 	return toAccount(row), nil
 }
 
+// UpdateAccountPassword updates the hashed password for an account.
 func (s *Store) UpdateAccountPassword(ctx context.Context, accountID, passwordHash string) error {
 	if err := s.q.UpdateAccountPassword(ctx, sqlc.UpdateAccountPasswordParams{
 		ID:           accountID,
@@ -143,6 +152,7 @@ func (s *Store) UpdateAccountPassword(ctx context.Context, accountID, passwordHa
 	return nil
 }
 
+// InsertSession creates a new active session.
 func (s *Store) InsertSession(ctx context.Context, sess *Session) (*Session, error) {
 	row, err := s.q.InsertSession(ctx, sqlc.InsertSessionParams{
 		ID:        sess.ID,
@@ -161,6 +171,7 @@ func (s *Store) InsertSession(ctx context.Context, sess *Session) (*Session, err
 	return created, nil
 }
 
+// FindSessionByToken retrieves a session and its associated user by the plain token.
 func (s *Store) FindSessionByToken(ctx context.Context, plainToken string) (*User, *Session, error) {
 	row, err := s.q.FindSessionByTokenHash(ctx, hashToken(plainToken))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -191,6 +202,7 @@ func (s *Store) FindSessionByToken(ctx context.Context, plainToken string) (*Use
 	return user, sess, nil
 }
 
+// DeleteSession invalidates a specific session by its ID.
 func (s *Store) DeleteSession(ctx context.Context, id string) error {
 	if err := s.q.DeleteSession(ctx, id); err != nil {
 		return fmt.Errorf("deleting session %s: %w", id, err)
@@ -198,6 +210,7 @@ func (s *Store) DeleteSession(ctx context.Context, id string) error {
 	return nil
 }
 
+// DeleteUserSessions invalidates all active sessions for a user.
 func (s *Store) DeleteUserSessions(ctx context.Context, userID string) error {
 	if err := s.q.DeleteUserSessions(ctx, userID); err != nil {
 		return fmt.Errorf("deleting sessions for user %s: %w", userID, err)
@@ -205,6 +218,7 @@ func (s *Store) DeleteUserSessions(ctx context.Context, userID string) error {
 	return nil
 }
 
+// InsertVerificationToken stores a new email verification or password reset token.
 func (s *Store) InsertVerificationToken(ctx context.Context, vt *VerificationToken) error {
 	if err := s.q.InsertVerificationToken(ctx, sqlc.InsertVerificationTokenParams{
 		ID:        vt.ID,
@@ -219,6 +233,7 @@ func (s *Store) InsertVerificationToken(ctx context.Context, vt *VerificationTok
 	return nil
 }
 
+// FindVerificationTokenByToken retrieves a token by its plain value.
 func (s *Store) FindVerificationTokenByToken(ctx context.Context, plainToken string) (*VerificationToken, error) {
 	row, err := s.q.FindVerificationTokenByHash(ctx, hashToken(plainToken))
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -230,6 +245,7 @@ func (s *Store) FindVerificationTokenByToken(ctx context.Context, plainToken str
 	return toVerificationToken(row), nil
 }
 
+// MarkVerificationTokenUsed marks a token as consumed so it cannot be reused.
 func (s *Store) MarkVerificationTokenUsed(ctx context.Context, id string) error {
 	if err := s.q.MarkVerificationTokenUsed(ctx, id); err != nil {
 		return fmt.Errorf("marking verification token %s used: %w", id, err)
@@ -237,6 +253,7 @@ func (s *Store) MarkVerificationTokenUsed(ctx context.Context, id string) error 
 	return nil
 }
 
+// CountRecentVerificationTokens returns the number of tokens issued recently for rate limiting.
 func (s *Store) CountRecentVerificationTokens(ctx context.Context, email, tokenType string) (int, error) {
 	count, err := s.q.CountRecentVerificationTokens(ctx, sqlc.CountRecentVerificationTokensParams{
 		Email: email,
@@ -248,7 +265,6 @@ func (s *Store) CountRecentVerificationTokens(ctx context.Context, email, tokenT
 	return int(count), nil
 }
 
-// toUser maps a sqlc.User to a domain User.
 func toUser(row sqlc.User) *User {
 	return &User{
 		ID:              row.ID,

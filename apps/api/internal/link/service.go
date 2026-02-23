@@ -23,7 +23,7 @@ func NewService(store *Store) *Service {
 }
 
 // Create generates a short code and persists a new link.
-func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) {
+func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia string, input CreateInput) (*Link, error) {
 	code := input.ShortCode
 
 	if code == "" {
@@ -36,7 +36,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 
 	l := &Link{
 		ID:            "lnk_" + xid.New().String(),
-		WorkspaceID:   input.WorkspaceID,
+		WorkspaceID:   workspaceID,
+		CreatedBy:     userID,
 		FolderID:      input.FolderID,
 		ShortCode:     code,
 		DestURL:       input.DestURL,
@@ -55,14 +56,14 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 		OGDescription: input.OGDescription,
 		OGImage:       input.OGImage,
 		Notes:         input.Notes,
-		CreatedVia:    "web", // TODO: derive from auth context (web, api, import)
+		CreatedVia:    createdVia,
 	}
 
 	created, err := s.store.Insert(ctx, l)
 	if err != nil {
 		// Retry with new code on collision (only if auto-generated)
 		if errors.Is(err, ErrShortCodeTaken) && input.ShortCode == "" {
-			for i := 0; i < maxRetries; i++ {
+			for range maxRetries {
 				code, err = generateShortCode()
 				if err != nil {
 					return nil, fmt.Errorf("generating short code: %w", err)
@@ -72,7 +73,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Link, error) 
 				if err == nil {
 					return s.enrichShortURL(created), nil
 				}
-				if err != ErrShortCodeTaken {
+				if !errors.Is(err, ErrShortCodeTaken) {
 					return nil, err
 				}
 			}

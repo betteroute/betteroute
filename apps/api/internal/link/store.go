@@ -13,7 +13,7 @@ import (
 	"github.com/execrc/betteroute/internal/sqlc"
 )
 
-// Store handles link database operations.
+// Store handles database operations for the link package.
 type Store struct {
 	q    *sqlc.Queries
 	pool *pgxpool.Pool
@@ -24,10 +24,12 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
+// Insert creates a new link record.
 func (s *Store) Insert(ctx context.Context, l *Link) (*Link, error) {
 	row, err := s.q.InsertLink(ctx, sqlc.InsertLinkParams{
 		ID:            l.ID,
 		WorkspaceID:   l.WorkspaceID,
+		CreatedBy:     ptr.ToNonZero(l.CreatedBy),
 		FolderID:      ptr.ToNonZero(l.FolderID),
 		ShortCode:     l.ShortCode,
 		DestUrl:       l.DestURL,
@@ -57,6 +59,7 @@ func (s *Store) Insert(ctx context.Context, l *Link) (*Link, error) {
 	return toLink(row), nil
 }
 
+// FindByID retrieves a single link by ID.
 func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*Link, error) {
 	row, err := s.q.FindLinkByID(ctx, sqlc.FindLinkByIDParams{
 		ID:          id,
@@ -71,11 +74,12 @@ func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*Link, er
 	return toLink(row), nil
 }
 
+// List retrieves a paginated list of links for a workspace.
 func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, int, error) {
 	rows, err := s.q.ListLinksByWorkspace(ctx, sqlc.ListLinksByWorkspaceParams{
 		WorkspaceID: workspaceID,
-		Limit:       int32(limit),
-		Offset:      int32(offset),
+		Limit:       ptr.ToInt32(limit),
+		Offset:      ptr.ToInt32(offset),
 	})
 	if err != nil {
 		return nil, 0, fmt.Errorf("listing links: %w", err)
@@ -94,6 +98,7 @@ func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int)
 	return links, int(total), nil
 }
 
+// Update partially updates a link.
 func (s *Store) Update(ctx context.Context, id, workspaceID string, input UpdateInput) (*Link, error) {
 	var u db.Update
 
@@ -168,6 +173,7 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 	return toLink(row), nil
 }
 
+// SoftDelete marks a link as deleted.
 func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	rows, err := s.q.SoftDeleteLink(ctx, sqlc.SoftDeleteLinkParams{
 		ID:          id,
@@ -182,11 +188,11 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	return nil
 }
 
-// toLink maps a sqlc.Link to a domain Link.
 func toLink(row sqlc.Link) *Link {
 	return &Link{
 		ID:               row.ID,
 		WorkspaceID:      row.WorkspaceID,
+		CreatedBy:        ptr.From(row.CreatedBy),
 		FolderID:         ptr.From(row.FolderID),
 		ShortCode:        row.ShortCode,
 		DestURL:          row.DestUrl,

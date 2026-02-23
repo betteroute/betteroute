@@ -13,15 +13,13 @@ import (
 	"golang.org/x/oauth2/google"
 )
 
-// oauthProviders maps provider name to its oauth2 config.
-// Populated in NewService if credentials are configured.
+// oauthProviders holds configured OAuth provider configs.
 type oauthProviders struct {
 	google *oauth2.Config
 	github *oauth2.Config
 }
 
 // initOAuth builds the provider configs from auth.Config.
-// Called once from NewService.
 func initOAuth(cfg Config) oauthProviders {
 	p := oauthProviders{}
 
@@ -148,8 +146,6 @@ func (s *Service) upsertOAuthUser(ctx context.Context, provider string, cfg *oau
 	return user, nil
 }
 
-// --- Provider profile fetching ---
-
 // oauthProfile holds the normalized fields we care about from any provider.
 type oauthProfile struct {
 	id        string
@@ -171,11 +167,15 @@ func fetchProfile(ctx context.Context, provider string, cfg *oauth2.Config, toke
 
 func fetchGoogleProfile(ctx context.Context, cfg *oauth2.Config, token *oauth2.Token) (*oauthProfile, error) {
 	client := cfg.Client(ctx, token)
-	resp, err := client.Get("https://openidconnect.googleapis.com/v1/userinfo")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openidconnect.googleapis.com/v1/userinfo", nil)
+	if err != nil {
+		return nil, fmt.Errorf("building google request: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching google userinfo: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("google userinfo returned %d", resp.StatusCode)
@@ -207,11 +207,15 @@ func fetchGitHubProfile(ctx context.Context, cfg *oauth2.Config, token *oauth2.T
 	client := cfg.Client(ctx, token)
 
 	// Fetch the user object.
-	resp, err := client.Get("https://api.github.com/user")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user", nil)
+	if err != nil {
+		return nil, fmt.Errorf("building github user request: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("fetching github user: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -237,7 +241,7 @@ func fetchGitHubProfile(ctx context.Context, cfg *oauth2.Config, token *oauth2.T
 	// GitHub may not include email if the user has set it private.
 	email := raw.Email
 	if email == "" {
-		email, err = fetchGitHubPrimaryEmail(client)
+		email, err = fetchGitHubPrimaryEmail(ctx, client)
 		if err != nil {
 			return nil, err
 		}
@@ -251,12 +255,16 @@ func fetchGitHubProfile(ctx context.Context, cfg *oauth2.Config, token *oauth2.T
 	}, nil
 }
 
-func fetchGitHubPrimaryEmail(client *http.Client) (string, error) {
-	resp, err := client.Get("https://api.github.com/user/emails")
+func fetchGitHubPrimaryEmail(ctx context.Context, client *http.Client) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/user/emails", nil)
+	if err != nil {
+		return "", fmt.Errorf("building github emails request: %w", err)
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("fetching github emails: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var emails []struct {
 		Email    string `json:"email"`

@@ -14,21 +14,21 @@ import (
 
 const (
 	sessionDuration  = 30 * 24 * time.Hour // 30-day rolling session
-	verificationTTL  = 24 * time.Hour       // email verification link
-	passwordResetTTL = 1 * time.Hour        // password reset link (shorter for security)
-	rateLimitPerHour = 3                    // max verification/reset emails per email per hour
+	verificationTTL  = 24 * time.Hour      // email verification link
+	passwordResetTTL = 1 * time.Hour       // password reset link (shorter for security)
+	rateLimitPerHour = 3                   // max verification/reset emails per email per hour
 )
 
-// Service handles auth business logic.
+// Service implements auth business logic.
 type Service struct {
 	store    *Store
-	notifier notify.Notifier
+	notifier notify.AuthNotifier
 	cfg      Config
 	oauth    oauthProviders
 }
 
 // NewService creates a new auth service.
-func NewService(store *Store, notifier notify.Notifier, cfg Config) *Service {
+func NewService(store *Store, notifier notify.AuthNotifier, cfg Config) *Service {
 	return &Service{
 		store:    store,
 		notifier: notifier,
@@ -153,12 +153,9 @@ func (s *Service) ResendVerification(ctx context.Context, input ResendVerificati
 	}
 
 	user, err := s.store.FindUserByEmail(ctx, email)
-	if err != nil {
-		// Silently succeed — don't reveal whether the email exists.
-		return nil
+	if err == nil {
+		go s.sendVerificationEmail(context.Background(), user)
 	}
-
-	go s.sendVerificationEmail(context.Background(), user)
 	return nil
 }
 
@@ -172,11 +169,9 @@ func (s *Service) ForgotPassword(ctx context.Context, input ForgotPasswordInput)
 	}
 
 	user, err := s.store.FindUserByEmail(ctx, email)
-	if err != nil {
-		return nil // silent — no email enumeration
+	if err == nil {
+		go s.sendPasswordResetEmail(context.Background(), user)
 	}
-
-	go s.sendPasswordResetEmail(context.Background(), user)
 	return nil
 }
 
@@ -225,6 +220,12 @@ func (s *Service) ValidateSession(ctx context.Context, plainToken string) (*User
 	return user, sess, nil
 }
 
+// FindUserByID returns a user by ID. Used by the auth middleware to resolve
+// the API key creator into an auth.User for context injection.
+func (s *Service) FindUserByID(ctx context.Context, id string) (*User, error) {
+	return s.store.FindUserByID(ctx, id)
+}
+
 // createSession generates a token, persists the session, and returns it with the plain token set.
 func (s *Service) createSession(ctx context.Context, userID string, meta SessionMeta) (*Session, error) {
 	plain, _, err := generateToken()
@@ -261,7 +262,7 @@ func (s *Service) checkRateLimit(ctx context.Context, email, tokenType string) e
 func (s *Service) sendVerificationEmail(ctx context.Context, user *User) {
 	plain, _, err := generateToken()
 	if err != nil {
-		slog.Error("generating verification token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "generating verification token", "error", err, "user_id", user.ID)
 		return
 	}
 
@@ -273,13 +274,13 @@ func (s *Service) sendVerificationEmail(ctx context.Context, user *User) {
 		Type:       "email_verification",
 		ExpiresAt:  time.Now().Add(verificationTTL),
 	}); err != nil {
-		slog.Error("inserting verification token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "inserting verification token", "error", err, "user_id", user.ID)
 		return
 	}
 
 	url := s.cfg.WebURL + "/verify-email?token=" + plain
 	if err = s.notifier.SendVerificationEmail(ctx, user.Email, user.Name, url); err != nil {
-		slog.Error("sending verification email", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "sending verification email", "error", err, "user_id", user.ID)
 	}
 }
 
@@ -288,7 +289,7 @@ func (s *Service) sendVerificationEmail(ctx context.Context, user *User) {
 func (s *Service) sendPasswordResetEmail(ctx context.Context, user *User) {
 	plain, _, err := generateToken()
 	if err != nil {
-		slog.Error("generating reset token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "generating reset token", "error", err, "user_id", user.ID)
 		return
 	}
 
@@ -300,12 +301,12 @@ func (s *Service) sendPasswordResetEmail(ctx context.Context, user *User) {
 		Type:       "password_reset",
 		ExpiresAt:  time.Now().Add(passwordResetTTL),
 	}); err != nil {
-		slog.Error("inserting reset token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "inserting reset token", "error", err, "user_id", user.ID)
 		return
 	}
 
 	url := s.cfg.WebURL + "/reset-password?token=" + plain
 	if err = s.notifier.SendPasswordResetEmail(ctx, user.Email, user.Name, url); err != nil {
-		slog.Error("sending password reset email", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "sending password reset email", "error", err, "user_id", user.ID)
 	}
 }

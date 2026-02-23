@@ -5,6 +5,7 @@
 CREATE TABLE folders (
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
 
     name            TEXT NOT NULL,
     color           TEXT NOT NULL DEFAULT '#6366f1',

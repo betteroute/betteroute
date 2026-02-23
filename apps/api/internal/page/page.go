@@ -1,8 +1,8 @@
 // Package page provides pagination utilities for list endpoints.
 package page
 
-// Pagination defaults and limits.
 const (
+	// DefaultPage is the starting page number for paginated requests.
 	DefaultPage    = 1
 	DefaultPerPage = 20
 	MaxPerPage     = 100

@@ -1,10 +1,8 @@
--- Tag queries
-
 -- name: InsertTag :one
 INSERT INTO tags (
-    id, workspace_id, name, color
+    id, workspace_id, created_by, name, color
 ) VALUES (
-    $1, $2, $3, $4
+    $1, $2, $3, $4, $5
 ) RETURNING *;
 
 -- name: FindTagByID :one

@@ -1,5 +1,3 @@
--- Auth queries: users, accounts, sessions, verification tokens.
-
 -- Users
 
 -- name: InsertUser :one

@@ -8,25 +8,22 @@ import (
 	"github.com/execrc/betteroute/internal/opt"
 )
 
-// Domain type.
-
 // Tag represents a workspace tag for categorizing links.
 type Tag struct {
 	ID          string    `json:"id"`
 	WorkspaceID string    `json:"workspace_id"`
+	CreatedBy   string    `json:"created_by,omitempty"`
 	Name        string    `json:"name"`
 	Color       string    `json:"color"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// Input types.
-
 // CreateInput is the input for creating a tag.
+// WorkspaceID is securely injected by middleware.
 type CreateInput struct {
-	WorkspaceID string `json:"workspace_id" validate:"required"`
-	Name        string `json:"name"         validate:"required,min=1,max=50"`
-	Color       string `json:"color"        validate:"omitempty,hexcolor,len=7"`
+	Name  string `json:"name"         validate:"required,min=1,max=50"`
+	Color string `json:"color"        validate:"omitempty,hexcolor,len=7"`
 }
 
 // UpdateInput is the input for partially updating a tag.
@@ -39,8 +36,6 @@ type UpdateInput struct {
 type AddToLinkInput struct {
 	TagID string `json:"tag_id" validate:"required"`
 }
-
-// Sentinel errors.
 
 var (
 	ErrNotFound  = errors.New("tag not found")

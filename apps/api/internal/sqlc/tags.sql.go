@@ -40,7 +40,7 @@ func (q *Queries) CountTagsByWorkspace(ctx context.Context, workspaceID string) 
 }
 
 const findTagByID = `-- name: FindTagByID :one
-SELECT id, workspace_id, name, color, deleted_at, created_at, updated_at FROM tags
+SELECT id, workspace_id, created_by, name, color, deleted_at, created_at, updated_at FROM tags
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 `
 
@@ -55,6 +55,7 @@ func (q *Queries) FindTagByID(ctx context.Context, arg FindTagByIDParams) (Tag, 
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.Name,
 		&i.Color,
 		&i.DeletedAt,
@@ -65,26 +66,26 @@ func (q *Queries) FindTagByID(ctx context.Context, arg FindTagByIDParams) (Tag, 
 }
 
 const insertTag = `-- name: InsertTag :one
-
 INSERT INTO tags (
-    id, workspace_id, name, color
+    id, workspace_id, created_by, name, color
 ) VALUES (
-    $1, $2, $3, $4
-) RETURNING id, workspace_id, name, color, deleted_at, created_at, updated_at
+    $1, $2, $3, $4, $5
+) RETURNING id, workspace_id, created_by, name, color, deleted_at, created_at, updated_at
 `
 
 type InsertTagParams struct {
-	ID          string `json:"id"`
-	WorkspaceID string `json:"workspace_id"`
-	Name        string `json:"name"`
-	Color       string `json:"color"`
+	ID          string  `json:"id"`
+	WorkspaceID string  `json:"workspace_id"`
+	CreatedBy   *string `json:"created_by"`
+	Name        string  `json:"name"`
+	Color       string  `json:"color"`
 }
 
-// Tag queries
 func (q *Queries) InsertTag(ctx context.Context, arg InsertTagParams) (Tag, error) {
 	row := q.db.QueryRow(ctx, insertTag,
 		arg.ID,
 		arg.WorkspaceID,
+		arg.CreatedBy,
 		arg.Name,
 		arg.Color,
 	)
@@ -92,6 +93,7 @@ func (q *Queries) InsertTag(ctx context.Context, arg InsertTagParams) (Tag, erro
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.Name,
 		&i.Color,
 		&i.DeletedAt,
@@ -128,7 +130,7 @@ func (q *Queries) ListLinkIDsByTag(ctx context.Context, tagID string) ([]string,
 }
 
 const listTagsByLink = `-- name: ListTagsByLink :many
-SELECT t.id, t.workspace_id, t.name, t.color, t.deleted_at, t.created_at, t.updated_at FROM tags t
+SELECT t.id, t.workspace_id, t.created_by, t.name, t.color, t.deleted_at, t.created_at, t.updated_at FROM tags t
 JOIN link_tags lt ON lt.tag_id = t.id
 WHERE lt.link_id = $1 AND t.deleted_at IS NULL
 ORDER BY t.name
@@ -146,6 +148,7 @@ func (q *Queries) ListTagsByLink(ctx context.Context, linkID string) ([]Tag, err
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
+			&i.CreatedBy,
 			&i.Name,
 			&i.Color,
 			&i.DeletedAt,
@@ -163,7 +166,7 @@ func (q *Queries) ListTagsByLink(ctx context.Context, linkID string) ([]Tag, err
 }
 
 const listTagsByWorkspace = `-- name: ListTagsByWorkspace :many
-SELECT id, workspace_id, name, color, deleted_at, created_at, updated_at FROM tags
+SELECT id, workspace_id, created_by, name, color, deleted_at, created_at, updated_at FROM tags
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY name
 `
@@ -180,6 +183,7 @@ func (q *Queries) ListTagsByWorkspace(ctx context.Context, workspaceID string) (
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
+			&i.CreatedBy,
 			&i.Name,
 			&i.Color,
 			&i.DeletedAt,

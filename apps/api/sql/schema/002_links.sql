@@ -5,6 +5,7 @@
 CREATE TABLE links (
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
     folder_id       TEXT,                         -- optional grouping (FK in 003_folders.sql)
 
     -- Core

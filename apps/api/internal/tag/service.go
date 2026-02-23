@@ -8,7 +8,7 @@ import (
 
 const defaultColor = "#6366f1"
 
-// Service handles tag business logic.
+// Service implements tag business logic.
 type Service struct {
 	store *Store
 }
@@ -19,7 +19,7 @@ func NewService(store *Store) *Service {
 }
 
 // Create persists a new tag.
-func (s *Service) Create(ctx context.Context, input CreateInput) (*Tag, error) {
+func (s *Service) Create(ctx context.Context, workspaceID, userID string, input CreateInput) (*Tag, error) {
 	color := input.Color
 	if color == "" {
 		color = defaultColor
@@ -27,7 +27,8 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*Tag, error) {
 
 	t := &Tag{
 		ID:          "tag_" + xid.New().String(),
-		WorkspaceID: input.WorkspaceID,
+		WorkspaceID: workspaceID,
+		CreatedBy:   userID,
 		Name:        input.Name,
 		Color:       color,
 	}

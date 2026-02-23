@@ -1,10 +1,8 @@
--- Folder queries
-
 -- name: InsertFolder :one
 INSERT INTO folders (
-    id, workspace_id, name, color, position
+    id, workspace_id, created_by, name, color, position
 ) VALUES (
-    $1, $2, $3, $4, $5
+    $1, $2, $3, $4, $5, $6
 ) RETURNING *;
 
 -- name: FindFolderByID :one

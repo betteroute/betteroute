@@ -22,7 +22,7 @@ func (q *Queries) CountFoldersByWorkspace(ctx context.Context, workspaceID strin
 }
 
 const findFolderByID = `-- name: FindFolderByID :one
-SELECT id, workspace_id, name, color, position, deleted_at, created_at, updated_at FROM folders
+SELECT id, workspace_id, created_by, name, color, position, deleted_at, created_at, updated_at FROM folders
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 `
 
@@ -37,6 +37,7 @@ func (q *Queries) FindFolderByID(ctx context.Context, arg FindFolderByIDParams) 
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.Name,
 		&i.Color,
 		&i.Position,
@@ -48,27 +49,27 @@ func (q *Queries) FindFolderByID(ctx context.Context, arg FindFolderByIDParams) 
 }
 
 const insertFolder = `-- name: InsertFolder :one
-
 INSERT INTO folders (
-    id, workspace_id, name, color, position
+    id, workspace_id, created_by, name, color, position
 ) VALUES (
-    $1, $2, $3, $4, $5
-) RETURNING id, workspace_id, name, color, position, deleted_at, created_at, updated_at
+    $1, $2, $3, $4, $5, $6
+) RETURNING id, workspace_id, created_by, name, color, position, deleted_at, created_at, updated_at
 `
 
 type InsertFolderParams struct {
-	ID          string `json:"id"`
-	WorkspaceID string `json:"workspace_id"`
-	Name        string `json:"name"`
-	Color       string `json:"color"`
-	Position    int32  `json:"position"`
+	ID          string  `json:"id"`
+	WorkspaceID string  `json:"workspace_id"`
+	CreatedBy   *string `json:"created_by"`
+	Name        string  `json:"name"`
+	Color       string  `json:"color"`
+	Position    int32   `json:"position"`
 }
 
-// Folder queries
 func (q *Queries) InsertFolder(ctx context.Context, arg InsertFolderParams) (Folder, error) {
 	row := q.db.QueryRow(ctx, insertFolder,
 		arg.ID,
 		arg.WorkspaceID,
+		arg.CreatedBy,
 		arg.Name,
 		arg.Color,
 		arg.Position,
@@ -77,6 +78,7 @@ func (q *Queries) InsertFolder(ctx context.Context, arg InsertFolderParams) (Fol
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
+		&i.CreatedBy,
 		&i.Name,
 		&i.Color,
 		&i.Position,
@@ -88,7 +90,7 @@ func (q *Queries) InsertFolder(ctx context.Context, arg InsertFolderParams) (Fol
 }
 
 const listFoldersByWorkspace = `-- name: ListFoldersByWorkspace :many
-SELECT id, workspace_id, name, color, position, deleted_at, created_at, updated_at FROM folders
+SELECT id, workspace_id, created_by, name, color, position, deleted_at, created_at, updated_at FROM folders
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY position, created_at
 `
@@ -105,6 +107,7 @@ func (q *Queries) ListFoldersByWorkspace(ctx context.Context, workspaceID string
 		if err := rows.Scan(
 			&i.ID,
 			&i.WorkspaceID,
+			&i.CreatedBy,
 			&i.Name,
 			&i.Color,
 			&i.Position,

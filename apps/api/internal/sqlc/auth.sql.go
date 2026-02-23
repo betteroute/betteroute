@@ -325,7 +325,6 @@ func (q *Queries) InsertSession(ctx context.Context, arg InsertSessionParams) (S
 
 const insertUser = `-- name: InsertUser :one
 
-
 INSERT INTO users (id, name, email, avatar_url)
 VALUES ($1, $2, $3, $4)
 RETURNING id, name, email, email_verified_at, avatar_url, status, onboarded_at, last_login_at, timezone, deleted_at, created_at, updated_at
@@ -338,7 +337,6 @@ type InsertUserParams struct {
 	AvatarUrl *string `json:"avatar_url"`
 }
 
-// Auth queries: users, accounts, sessions, verification tokens.
 // Users
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, insertUser,

@@ -4,6 +4,7 @@
 package validate
 
 import (
+	"errors"
 	"reflect"
 	"regexp"
 	"strings"
@@ -28,7 +29,7 @@ func init() {
 		return name
 	})
 
-	v.RegisterValidation("shortcode", isShortCode)
+	_ = v.RegisterValidation("shortcode", isShortCode)
 
 	// Unwrap opt.Field[T] so validator sees the inner Value for tag-based checks.
 	v.RegisterCustomTypeFunc(extractOptField,
@@ -56,8 +57,8 @@ func Struct(s any) []errs.FieldError {
 		return nil
 	}
 
-	validationErrors, ok := err.(validator.ValidationErrors)
-	if !ok {
+	var validationErrors validator.ValidationErrors
+	if !errors.As(err, &validationErrors) {
 		return []errs.FieldError{{Field: "_", Message: "invalid input"}}
 	}
 
