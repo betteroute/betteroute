@@ -53,7 +53,7 @@ tasks:
 
   # Docs
   docs:
-    command: "go tool swag init -g cmd/betteroute/main.go -o internal/openapi --outputTypes json"
+    command: "go tool swag init -d cmd/betteroute -g main.go -o internal/openapi --outputTypes json --parseInternal"
     inputs:
       - "@group(sources)"
     outputs:
@@ -61,7 +61,7 @@ tasks:
 
   # SQL code generation
   sqlc:
-    command: "go tool sqlc generate"
+    command: "go tool sqlc generate -f sql/sqlc.yaml"
     options:
       cache: false
     inputs:
@@ -71,34 +71,29 @@ tasks:
 
   # Database
   db-diff:
-    command: "atlas migrate diff --env dev"
+    script: "cd sql && atlas migrate diff --env dev"
+    preset: "utility" # Disables caching, enables interactive mode, and streams output.
     inputs:
       - "@group(schema)"
       - "sql/atlas.hcl"
-    options:
-      cache: false
 
   db-apply:
-    command: "atlas migrate apply --env dev"
-    options:
-      cache: false
+    script: "cd sql && atlas migrate apply --env dev"
+    preset: "utility"
 
   db-status:
-    command: "atlas migrate status --env dev"
-    options:
-      cache: false
+    script: "cd sql && atlas migrate status --env dev"
+    preset: "utility"
 
   db-hash:
-    command: "atlas migrate hash --env dev"
+    script: "cd sql && atlas migrate hash --env dev"
+    preset: "utility"
     inputs:
       - "sql/migrations/*"
-    options:
-      cache: false
 
   db-seed:
     script: "for f in sql/seeds/*.sql; do psql ${DATABASE_URL} -f \"$f\"; done"
-    options:
-      cache: false
+    preset: "utility"
 
   check:
     deps:

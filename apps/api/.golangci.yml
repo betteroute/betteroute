@@ -1,8 +1,5 @@
 version: "2"
 
-run:
-  timeout: 5m
-
 formatters:
   enable:
     - goimports
@@ -42,57 +39,60 @@ linters:
     - unconvert      # unnecessary conversions
     - revive         # configurable linter
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
+  settings:
+    errcheck:
+      check-type-assertions: true
 
-  gosec:
-    excludes:
-      - G104  # errcheck handles this
+    gosec:
+      excludes:
+        - G117  # password struct fields are input, not secrets
 
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment  # micro-optimization
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment  # micro-optimization
 
-  sloglint:
-    context: scope
-    static-msg: true
+    sloglint:
+      context: scope
+      static-msg: true
 
-  staticcheck:
-    checks:
-      - all
+    staticcheck:
+      checks:
+        - all
 
-  nolintlint:
-    require-explanation: true
-    require-specific: true
+    nolintlint:
+      require-explanation: true
+      require-specific: true
 
-  revive:
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: error-return
+        - name: error-naming
+        - name: exported
+          disabled: true
+        - name: increment-decrement
+        - name: var-declaration
+        - name: range
+        - name: receiver-naming
+        - name: indent-error-flow
+        - name: empty-block
+        - name: superfluous-else
+        - name: unreachable-code
+
+  exclusions:
+    presets:
+      - comments
+      - std-error-handling
+      - common-false-positives
+    paths:
+      - "(.*/)?sqlc/"
+      - "(.*/)?mocks/"
     rules:
-      - name: blank-imports
-      - name: context-as-argument
-      - name: error-return
-      - name: error-naming
-      - name: increment-decrement
-      - name: var-declaration
-      - name: range
-      - name: receiver-naming
-      - name: indent-error-flow
-      - name: empty-block
-      - name: superfluous-else
-      - name: unreachable-code
-
-exclusions:
-  presets:
-    - std-error-handling
-    - common-false-positives
-  paths:
-    - "**/sqlc/**"
-    - "**/mocks/**"
-  rules:
-    - path: '_test\.go'
-      linters:
-        - bodyclose
-        - errcheck
-        - gosec
-        - noctx
+      - path: '_test\.go'
+        linters:
+          - bodyclose
+          - errcheck
+          - gosec
+          - noctx
