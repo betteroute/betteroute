@@ -1,0 +1,61 @@
+$schema: "../../.moon/cache/schemas/project.json"
+
+language: typescript
+stack: frontend
+
+project:
+  name: "app"
+  description: "Betteroute dashboard application"
+
+fileGroups:
+  sources:
+    - "src/**/*"
+    - "public/**/*"
+  configs:
+    - "tsconfig.json"
+    - "vite.config.ts"
+    - "biome.json"
+    - "components.json"
+  tests:
+    - "src/**/*.test.{ts,tsx}"
+
+tasks:
+  # Development
+  dev:
+    command: "pnpm dev"
+    options:
+      cache: false
+      persistent: true
+
+  # Build
+  build:
+    command: "pnpm build"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+
+  # Testing
+  test:
+    command: "pnpm test"
+    inputs:
+      - "@group(sources)"
+      - "@group(tests)"
+
+  # Linting
+  lint:
+    command: "pnpm lint"
+    inputs:
+      - "@group(sources)"
+      - "@group(configs)"
+
+  # Formatting
+  format:
+    command: "pnpm format"
+    options:
+      cache: false
+
+  # Check (lint + format)
+  check:
+    command: "pnpm check"
+    options:
+      cache: false
