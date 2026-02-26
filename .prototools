@@ -2,3 +2,6 @@ moon = "latest"
 go = "1.26.0"
 node = "25.6.1"
 pnpm = "10.29.3"
+
+[settings]
+auto-install = true
