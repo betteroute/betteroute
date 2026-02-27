@@ -69,7 +69,7 @@ func (h *Handler) SignUp(c fiber.Ctx) error {
 
 	user, sess, err := h.svc.Register(c.Context(), input, sessionMeta(c))
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	h.setSessionCookie(c, sess)
@@ -99,7 +99,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 
 	user, sess, err := h.svc.Login(c.Context(), input, sessionMeta(c))
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	h.setSessionCookie(c, sess)
@@ -115,12 +115,12 @@ func (h *Handler) Login(c fiber.Ctx) error {
 // @Failure     500 {object} errs.Error
 // @Router      /api/v1/auth/logout [post]
 func (h *Handler) Logout(c fiber.Ctx) error {
-	session := FromContext(c).Session
+	session := FromContext(c.Context()).Session
 	if session == nil {
 		return errs.BadRequest("no active session")
 	}
 	if err := h.svc.Logout(c.Context(), session.ID); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	h.clearSessionCookie(c)
 	return c.SendStatus(fiber.StatusNoContent)
@@ -135,7 +135,7 @@ func (h *Handler) Logout(c fiber.Ctx) error {
 // @Router      /api/v1/auth/me [get]
 func (h *Handler) Me(c fiber.Ctx) error {
 	// User is already loaded by Authenticate middleware.
-	return c.JSON(FromContext(c).User)
+	return c.JSON(FromContext(c.Context()).User)
 }
 
 // @Summary     Update current user
@@ -159,9 +159,9 @@ func (h *Handler) UpdateMe(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	user, err := h.svc.UpdateProfile(c.Context(), FromContext(c).User.ID, input)
+	user, err := h.svc.UpdateProfile(c.Context(), FromContext(c.Context()).User.ID, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(user)
@@ -187,7 +187,7 @@ func (h *Handler) VerifyEmail(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.VerifyEmail(c.Context(), input); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -212,7 +212,7 @@ func (h *Handler) ResendVerification(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.ResendVerification(c.Context(), input); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -260,7 +260,7 @@ func (h *Handler) ResetPassword(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.ResetPassword(c.Context(), input); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -293,7 +293,7 @@ func (h *Handler) OAuthRedirect(c fiber.Ctx) error {
 
 	url, err := h.svc.OAuthURL(provider, state)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.Redirect().To(url)
 }
@@ -325,7 +325,7 @@ func (h *Handler) OAuthCallback(c fiber.Ctx) error {
 
 	_, sess, err := h.svc.OAuthCallback(c.Context(), provider, code, sessionMeta(c))
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	h.setSessionCookie(c, sess)
@@ -335,7 +335,7 @@ func (h *Handler) OAuthCallback(c fiber.Ctx) error {
 }
 
 // mapError maps domain errors to HTTP errors.
-func (h *Handler) mapError(err error) error {
+func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrEmailTaken):
 		return errs.Conflict("email already in use")

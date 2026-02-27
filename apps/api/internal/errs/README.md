@@ -61,7 +61,7 @@ func (s *Store) GetBySlug(ctx context.Context, slug string) (*Link, error) {
 ### In handlers — map domain errors to HTTP errors
 
 ```go
-func (h *Handler) mapError(err error) error {
+func mapError(err error) error {
     switch {
     case errors.Is(err, ErrLinkNotFound):
         return errs.NotFound("Link", "")
