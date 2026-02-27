@@ -49,7 +49,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	keys, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(keys)
@@ -74,7 +74,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 
 	key, err := h.svc.Get(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(key)
@@ -119,7 +119,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		input,
 	)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(result)
@@ -142,14 +142,14 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // mapError maps domain errors to HTTP errors.
-func (h *Handler) mapError(err error) error {
+func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return errs.NotFound("API key", "")
