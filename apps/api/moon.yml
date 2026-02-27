@@ -53,11 +53,11 @@ tasks:
 
   # Docs
   docs:
-    command: "go tool swag init -d cmd/betteroute -g main.go -o internal/openapi --outputTypes json --parseInternal"
+    command: "go tool swag init -d . -g cmd/betteroute/main.go -o internal/openapi --parseInternal --outputTypes go"
     inputs:
       - "@group(sources)"
     outputs:
-      - "internal/openapi/swagger.json"
+      - "internal/openapi/docs.go"
 
   # SQL code generation
   sqlc:

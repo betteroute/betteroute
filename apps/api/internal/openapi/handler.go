@@ -1,14 +1,22 @@
 package openapi
 
-import "github.com/gofiber/fiber/v3"
+import (
+	"github.com/gofiber/fiber/v3"
+	"github.com/swaggo/swag"
+)
 
 // Register mounts the API documentation routes.
 // GET /docs       → Scalar UI (interactive API explorer)
-// GET /docs/json  → raw OpenAPI 3.0 spec
+// GET /docs/json  → raw OpenAPI spec
 func Register(app *fiber.App) {
+	spec, err := swag.ReadDoc()
+	if err != nil {
+		spec = `{"error":"failed to read OpenAPI spec"}`
+	}
+
 	app.Get("/docs/json", func(c fiber.Ctx) error {
 		c.Set("Content-Type", "application/json")
-		return c.Send(Spec)
+		return c.SendString(spec)
 	})
 
 	app.Get("/docs", func(c fiber.Ctx) error {
