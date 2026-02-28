@@ -37,8 +37,10 @@ func (h *Handler) Register(r fiber.Router) {
 // @Description Returns all tags for a workspace, ordered by name.
 // @Tags        tags
 // @Produce     json
-// @Success     200 {array}  Tag
-// @Failure     500 {object} errs.Error
+// @Param       slug path string true "Workspace slug"
+// @Success     200  {array}  Tag
+// @Failure     403  {object} errs.Error
+// @Failure     500  {object} errs.Error
 // @Router      /api/v1/workspaces/{slug}/tags [get]
 func (h *Handler) List(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -48,7 +50,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	tags, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(tags)
@@ -58,10 +60,12 @@ func (h *Handler) List(c fiber.Ctx) error {
 // @Description Returns a single tag by ID within a workspace.
 // @Tags        tags
 // @Produce     json
-// @Param       id path string true "Tag ID"
-// @Success     200 {object} Tag
-// @Failure     404 {object} errs.Error
-// @Failure     500 {object} errs.Error
+// @Param       slug path string true "Workspace slug"
+// @Param       id   path string true "Tag ID"
+// @Success     200  {object} Tag
+// @Failure     403  {object} errs.Error
+// @Failure     404  {object} errs.Error
+// @Failure     500  {object} errs.Error
 // @Router      /api/v1/workspaces/{slug}/tags/{id} [get]
 func (h *Handler) Get(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -71,7 +75,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 
 	t, err := h.svc.Get(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(t)
@@ -82,10 +86,12 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Tags        tags
 // @Accept      json
 // @Produce     json
-// @Param       body body     CreateInput true "Tag input"
+// @Param       slug path string      true "Workspace slug"
+// @Param       body body  CreateInput true "Tag input"
 // @Success     201  {object} Tag
 // @Failure     400  {object} errs.Error
 // @Failure     402  {object} errs.Error "Quota exceeded"
+// @Failure     403  {object} errs.Error
 // @Failure     409  {object} errs.Error "Tag name already exists"
 // @Failure     422  {object} errs.Error "Validation failed"
 // @Failure     500  {object} errs.Error
@@ -114,7 +120,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 	userID := auth.FromContext(ctx).User.ID
 	t, err := h.svc.Create(ctx, rbac.FromContext(ctx).WorkspaceID, userID, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(t)
@@ -125,14 +131,16 @@ func (h *Handler) Create(c fiber.Ctx) error {
 // @Tags        tags
 // @Accept      json
 // @Produce     json
+// @Param       slug path string      true "Workspace slug"
 // @Param       id   path string      true "Tag ID"
-// @Param       body body UpdateInput  true "Fields to update"
-// @Success     200 {object} Tag
-// @Failure     400 {object} errs.Error
-// @Failure     404 {object} errs.Error
-// @Failure     409 {object} errs.Error "Tag name already exists"
-// @Failure     422 {object} errs.Error "Validation failed"
-// @Failure     500 {object} errs.Error
+// @Param       body body  UpdateInput true "Fields to update"
+// @Success     200  {object} Tag
+// @Failure     400  {object} errs.Error
+// @Failure     403  {object} errs.Error
+// @Failure     404  {object} errs.Error
+// @Failure     409  {object} errs.Error "Tag name already exists"
+// @Failure     422  {object} errs.Error "Validation failed"
+// @Failure     500  {object} errs.Error
 // @Router      /api/v1/workspaces/{slug}/tags/{id} [patch]
 func (h *Handler) Update(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -154,7 +162,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 
 	t, err := h.svc.Update(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.JSON(t)
@@ -163,10 +171,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 // @Summary     Delete tag
 // @Description Soft-deletes a tag. Removes it from all links.
 // @Tags        tags
-// @Param       id path string true "Tag ID"
-// @Success     204 "No Content"
-// @Failure     404 {object} errs.Error
-// @Failure     500 {object} errs.Error
+// @Param       slug path string true "Workspace slug"
+// @Param       id   path string true "Tag ID"
+// @Success     204  "No Content"
+// @Failure     403  {object} errs.Error
+// @Failure     404  {object} errs.Error
+// @Failure     500  {object} errs.Error
 // @Router      /api/v1/workspaces/{slug}/tags/{id} [delete]
 func (h *Handler) Delete(c fiber.Ctx) error {
 	ctx := c.Context()
@@ -178,14 +188,14 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 
 	return c.SendStatus(fiber.StatusNoContent)
 }
 
 // mapError maps domain errors to HTTP errors.
-func (h *Handler) mapError(err error) error {
+func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return errs.NotFound("tag", "")

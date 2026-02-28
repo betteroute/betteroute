@@ -5,7 +5,7 @@
 CREATE TABLE tags (
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_by      TEXT,                         -- FK in 005_auth.sql
 
     name            TEXT NOT NULL,
     color           TEXT NOT NULL DEFAULT '#6366f1',
