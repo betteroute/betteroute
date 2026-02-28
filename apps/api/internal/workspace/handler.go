@@ -66,7 +66,7 @@ func (h *Handler) List(c fiber.Ctx) error {
 
 	workspaces, err := h.svc.List(ctx, auth.FromContext(ctx).User.ID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.JSON(workspaces)
 }
@@ -100,7 +100,7 @@ func (h *Handler) Create(c fiber.Ctx) error {
 
 	ws, err := h.svc.Create(ctx, auth.FromContext(ctx).User.ID, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(WithRole{Workspace: ws, Role: rbac.Owner})
 }
@@ -123,7 +123,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	rctx := rbac.FromContext(ctx)
 	ws, err := h.svc.Get(ctx, rctx.WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.JSON(WithRole{Workspace: ws, Role: rctx.Role})
 }
@@ -135,7 +135,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 // @Produce     json
 // @Param       slug path string      true "Workspace slug"
 // @Param       body body UpdateInput  true "Fields to update"
-// @Success     200  {object} Workspace
+// @Success     200  {object} WithRole
 // @Failure     400  {object} errs.Error
 // @Failure     403  {object} errs.Error
 // @Failure     404  {object} errs.Error
@@ -157,11 +157,12 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	ws, err := h.svc.Update(ctx, rbac.FromContext(ctx).WorkspaceID, input)
+	rctx := rbac.FromContext(ctx)
+	ws, err := h.svc.Update(ctx, rctx.WorkspaceID, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
-	return c.JSON(ws)
+	return c.JSON(WithRole{Workspace: ws, Role: rctx.Role})
 }
 
 // @Summary     Delete workspace
@@ -180,7 +181,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.Delete(ctx, rbac.FromContext(ctx).WorkspaceID); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -202,7 +203,7 @@ func (h *Handler) ListMembers(c fiber.Ctx) error {
 
 	members, err := h.svc.ListMembers(ctx, rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.JSON(members)
 }
@@ -236,7 +237,7 @@ func (h *Handler) UpdateMember(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.UpdateMember(ctx, rbac.FromContext(ctx).WorkspaceID, c.Params("userID"), input); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -265,7 +266,7 @@ func (h *Handler) RemoveMember(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.RemoveMember(ctx, rbac.FromContext(ctx).WorkspaceID, targetUserID); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -305,7 +306,7 @@ func (h *Handler) Invite(c fiber.Ctx) error {
 	user := auth.FromContext(ctx).User
 	inv, err := h.svc.Invite(ctx, rbac.FromContext(ctx).WorkspaceID, user.ID, user.Name, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.Status(fiber.StatusCreated).JSON(inv)
 }
@@ -327,7 +328,7 @@ func (h *Handler) ListInvitations(c fiber.Ctx) error {
 
 	invitations, err := h.svc.ListInvitations(ctx, rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.JSON(invitations)
 }
@@ -349,7 +350,7 @@ func (h *Handler) CancelInvitation(c fiber.Ctx) error {
 	}
 
 	if err := h.svc.CancelInvitation(ctx, rbac.FromContext(ctx).WorkspaceID, c.Params("id")); err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.SendStatus(fiber.StatusNoContent)
 }
@@ -384,13 +385,13 @@ func (h *Handler) AcceptInvitation(c fiber.Ctx) error {
 	user := auth.FromContext(ctx).User
 	ws, err := h.svc.AcceptInvitation(ctx, user.ID, user.Email, input)
 	if err != nil {
-		return h.mapError(err)
+		return mapError(err)
 	}
 	return c.JSON(ws)
 }
 
 // mapError maps domain errors to HTTP errors.
-func (h *Handler) mapError(err error) error {
+func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return errs.NotFound("workspace", "")
