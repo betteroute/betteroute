@@ -15,22 +15,844 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/api/v1/folders": {
-            "get": {
-                "description": "Returns all folders for a workspace, ordered by position.",
+        "/api/v1/auth/forgot-password": {
+            "post": {
+                "description": "Sends a password reset email. Always returns 204 to prevent email enumeration.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Forgot password",
+                "parameters": [
+                    {
+                        "description": "Email address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.ForgotPasswordInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/login": {
+            "post": {
+                "description": "Authenticates with email and password, returns user and sets session cookie.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "folders"
+                    "auth"
                 ],
-                "summary": "List folders",
+                "summary": "Log in",
+                "parameters": [
+                    {
+                        "description": "Login payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.LoginInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/logout": {
+            "post": {
+                "description": "Invalidates the current session and clears the session cookie.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Log out",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "No active session (API key auth)",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/me": {
+            "get": {
+                "description": "Returns the authenticated user's profile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Partially updates the authenticated user's profile.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Update current user",
+                "parameters": [
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.UpdateProfileInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/oauth/{provider}": {
+            "get": {
+                "description": "Redirects to the OAuth provider's authorization page.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OAuth redirect",
+                "parameters": [
+                    {
+                        "enum": [
+                            "google",
+                            "github"
+                        ],
+                        "type": "string",
+                        "description": "OAuth provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to provider"
+                    },
+                    "400": {
+                        "description": "Provider not configured",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/oauth/{provider}/callback": {
+            "get": {
+                "description": "Handles the provider redirect, creates or links the account, and sets a session cookie.",
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OAuth callback",
+                "parameters": [
+                    {
+                        "enum": [
+                            "google",
+                            "github"
+                        ],
+                        "type": "string",
+                        "description": "OAuth provider",
+                        "name": "provider",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "CSRF state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to frontend callback"
+                    },
+                    "400": {
+                        "description": "Invalid state or missing code",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/resend-verification": {
+            "post": {
+                "description": "Sends a new email verification token to the given address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Resend verification email",
+                "parameters": [
+                    {
+                        "description": "Email address",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.ResendVerificationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limited",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/reset-password": {
+            "post": {
+                "description": "Sets a new password using a valid reset token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Reset password",
+                "parameters": [
+                    {
+                        "description": "Token and new password",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.ResetPasswordInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Token invalid or expired",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/signup": {
+            "post": {
+                "description": "Creates a new user account with email and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Sign up",
+                "parameters": [
+                    {
+                        "description": "Registration payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.RegisterInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/auth.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already in use",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/verify-email": {
+            "post": {
+                "description": "Confirms a user's email address with a one-time token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Verify email",
+                "parameters": [
+                    {
+                        "description": "Verification token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/auth.VerifyEmailInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Token invalid or expired",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces": {
+            "get": {
+                "description": "Returns all workspaces the authenticated user is a member of, with their role in each.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "List workspaces",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/workspace.WithRole"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "API keys cannot list workspaces",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new workspace and adds the authenticated user as owner.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Create workspace",
+                "parameters": [
+                    {
+                        "description": "Workspace input",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/workspace.CreateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/workspace.WithRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "API keys cannot create workspaces",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Slug already in use",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/accept-invitation": {
+            "post": {
+                "description": "Accepts a workspace invitation using a token. The authenticated user must match the invited email.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Accept invitation",
+                "parameters": [
+                    {
+                        "description": "Invitation token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/workspace.AcceptInvitationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/workspace.WithRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Token invalid or expired",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Email mismatch or API key auth",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Already a member",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}": {
+            "get": {
+                "description": "Returns a workspace by slug with the caller's role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Get workspace",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/workspace.WithRole"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Soft-deletes a workspace. Requires Owner role.",
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Delete workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Partially updates a workspace. Requires Admin role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Update workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/workspace.UpdateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/workspace.WithRole"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Slug already in use",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/api-keys": {
+            "get": {
+                "description": "Returns all active API keys for the workspace. Requires Admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "List API keys",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -40,20 +862,218 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_folder.Folder"
+                                "$ref": "#/definitions/apikey.APIKey"
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new API key for the workspace. The raw key is returned only once. Requires Admin role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "Create API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "API key input",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/apikey.CreateInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/apikey.APIKey"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "402": {
+                        "description": "API key quota exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/api-keys/{id}": {
+            "get": {
+                "description": "Returns a single API key by ID. Requires Admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "Get API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "API key ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apikey.APIKey"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Permanently removes an API key. Requires Admin role.",
+                "tags": [
+                    "api-keys"
+                ],
+                "summary": "Delete API key",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "API key ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/folders": {
+            "get": {
+                "description": "Returns all folders for a workspace, ordered by position.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "folders"
+                ],
+                "summary": "List folders",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/folder.Folder"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -77,7 +1097,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.CreateInput"
+                            "$ref": "#/definitions/folder.CreateInput"
                         }
                     }
                 ],
@@ -85,37 +1105,43 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "402": {
+                        "description": "Quota exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Folder name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/folders/{id}": {
+        "/api/v1/workspaces/{slug}/folders/{id}": {
             "get": {
                 "description": "Returns a single folder by ID within a workspace.",
                 "produces": [
@@ -132,38 +1158,25 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -181,35 +1194,22 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -235,19 +1235,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "description": "Fields to update",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.UpdateInput"
+                            "$ref": "#/definitions/folder.UpdateInput"
                         }
                     }
                 ],
@@ -255,48 +1248,212 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_folder.Folder"
+                            "$ref": "#/definitions/folder.Folder"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Folder name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/links": {
+        "/api/v1/workspaces/{slug}/invitations": {
             "get": {
-                "description": "Returns a paginated list of links for a workspace.",
+                "description": "Returns all pending invitations for the workspace. Requires Admin role.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "List invitations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/workspace.Invitation"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new workspace invitation and sends an email. Requires Admin role.",
                 "consumes": [
                     "application/json"
                 ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Invite member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Invitation payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/workspace.InviteInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/workspace.Invitation"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "402": {
+                        "description": "Member quota exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "409": {
+                        "description": "Already invited or already a member",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/invitations/{id}": {
+            "delete": {
+                "description": "Deletes a pending workspace invitation. Requires Admin role.",
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Cancel invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Invitation ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/links": {
+            "get": {
+                "description": "Returns a paginated list of links for a workspace.",
                 "produces": [
                     "application/json"
                 ],
@@ -305,13 +1462,6 @@ const docTemplate = `{
                 ],
                 "summary": "List links",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
-                    },
                     {
                         "type": "integer",
                         "default": 1,
@@ -337,13 +1487,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -367,7 +1517,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_link.CreateInput"
+                            "$ref": "#/definitions/link.CreateInput"
                         }
                     }
                 ],
@@ -375,37 +1525,43 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "402": {
+                        "description": "Quota exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Short code already in use",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/links/{id}": {
+        "/api/v1/workspaces/{slug}/links/{id}": {
             "get": {
                 "description": "Returns a single link by ID within a workspace.",
                 "produces": [
@@ -422,38 +1578,25 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -471,35 +1614,22 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -525,19 +1655,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "description": "Fields to update",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_link.UpdateInput"
+                            "$ref": "#/definitions/link.UpdateInput"
                         }
                     }
                 ],
@@ -545,44 +1668,44 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_link.Link"
+                            "$ref": "#/definitions/link.Link"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/links/{id}/tags": {
+        "/api/v1/workspaces/{slug}/links/{id}/tags": {
             "get": {
                 "description": "Returns all tags associated with a link.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "tags"
+                    "links"
                 ],
                 "summary": "List tags for link",
                 "parameters": [
@@ -600,14 +1723,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_tag.Tag"
+                                "$ref": "#/definitions/tag.Tag"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -618,7 +1741,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "tags"
+                    "links"
                 ],
                 "summary": "Add tag to link",
                 "parameters": [
@@ -635,7 +1758,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.AddToLinkInput"
+                            "$ref": "#/definitions/tag.AddToLinkInput"
                         }
                     }
                 ],
@@ -646,29 +1769,29 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/links/{id}/tags/{tag_id}": {
+        "/api/v1/workspaces/{slug}/links/{id}/tags/{tag_id}": {
             "delete": {
                 "description": "Removes a tag association from a link.",
                 "tags": [
-                    "tags"
+                    "links"
                 ],
                 "summary": "Remove tag from link",
                 "parameters": [
@@ -694,34 +1817,34 @@ const docTemplate = `{
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/tags": {
+        "/api/v1/workspaces/{slug}/members": {
             "get": {
-                "description": "Returns all tags for a workspace, ordered by name.",
+                "description": "Returns all members of a workspace with their roles.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "tags"
+                    "workspaces"
                 ],
-                "summary": "List tags",
+                "summary": "List members",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
                         "required": true
                     }
                 ],
@@ -731,20 +1854,173 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/internal_tag.Tag"
+                                "$ref": "#/definitions/workspace.Member"
                             }
                         }
                     },
-                    "400": {
-                        "description": "Bad Request",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/members/{userID}": {
+            "delete": {
+                "description": "Removes a user from the workspace. Any member can remove themselves (leave). Removing others requires Admin role. Cannot remove the last owner.",
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Remove member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target user ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Cannot remove last owner",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Changes a workspace member's role. Requires Admin role. Cannot demote the last owner.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "workspaces"
+                ],
+                "summary": "Update member role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Workspace slug",
+                        "name": "slug",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Target user ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New role",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/workspace.UpdateMemberInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Cannot remove last owner",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "422": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/workspaces/{slug}/tags": {
+            "get": {
+                "description": "Returns all tags for a workspace, ordered by name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tags"
+                ],
+                "summary": "List tags",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/tag.Tag"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -768,7 +2044,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.CreateInput"
+                            "$ref": "#/definitions/tag.CreateInput"
                         }
                     }
                 ],
@@ -776,37 +2052,43 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
+                        }
+                    },
+                    "402": {
+                        "description": "Quota exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Tag name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
             }
         },
-        "/api/v1/tags/{id}": {
+        "/api/v1/workspaces/{slug}/tags/{id}": {
             "get": {
                 "description": "Returns a single tag by ID within a workspace.",
                 "produces": [
@@ -823,38 +2105,25 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -872,35 +2141,22 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "No Content"
                     },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -926,19 +2182,12 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "Workspace ID",
-                        "name": "workspace_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "description": "Fields to update",
                         "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.UpdateInput"
+                            "$ref": "#/definitions/tag.UpdateInput"
                         }
                     }
                 ],
@@ -946,37 +2195,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_tag.Tag"
+                            "$ref": "#/definitions/tag.Tag"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "409": {
                         "description": "Tag name already exists",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "422": {
                         "description": "Validation failed",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -1005,13 +2254,13 @@ const docTemplate = `{
                     "404": {
                         "description": "Link not found, inactive, or expired",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.Error"
+                            "$ref": "#/definitions/errs.Error"
                         }
                     }
                 }
@@ -1019,7 +2268,232 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_execrc_betteroute_internal_errs.Error": {
+        "apikey.APIKey": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "key_prefix": {
+                    "type": "string"
+                },
+                "last_used_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permission": {
+                    "$ref": "#/definitions/apikey.Permission"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Scope"
+                    }
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "apikey.CreateInput": {
+            "type": "object",
+            "required": [
+                "name",
+                "permission"
+            ],
+            "properties": {
+                "expires_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "permission": {
+                    "$ref": "#/definitions/apikey.Permission"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/rbac.Scope"
+                    }
+                }
+            }
+        },
+        "apikey.Permission": {
+            "type": "string",
+            "enum": [
+                "all",
+                "read_only",
+                "restricted"
+            ],
+            "x-enum-varnames": [
+                "PermissionAll",
+                "PermissionReadOnly",
+                "PermissionRestricted"
+            ]
+        },
+        "auth.ForgotPasswordInput": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.LoginInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.RegisterInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "name",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 254
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8
+                }
+            }
+        },
+        "auth.ResendVerificationInput": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.ResetPasswordInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "token"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 8
+                },
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.UpdateProfileInput": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string",
+                    "maxLength": 2048
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "timezone": {
+                    "type": "string",
+                    "maxLength": 100
+                }
+            }
+        },
+        "auth.User": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "email_verified_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "last_login_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "onboarded_at": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timezone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "auth.VerifyEmailInput": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "errs.Error": {
             "type": "object",
             "properties": {
                 "detail": {
@@ -1028,7 +2502,7 @@ const docTemplate = `{
                 "errors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_execrc_betteroute_internal_errs.FieldError"
+                        "$ref": "#/definitions/errs.FieldError"
                     }
                 },
                 "instance": {
@@ -1051,7 +2525,7 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_execrc_betteroute_internal_errs.FieldError": {
+        "errs.FieldError": {
             "type": "object",
             "properties": {
                 "field": {
@@ -1062,11 +2536,10 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_folder.CreateInput": {
+        "folder.CreateInput": {
             "type": "object",
             "required": [
-                "name",
-                "workspace_id"
+                "name"
             ],
             "properties": {
                 "color": {
@@ -1076,19 +2549,19 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 100,
                     "minLength": 1
-                },
-                "workspace_id": {
-                    "type": "string"
                 }
             }
         },
-        "internal_folder.Folder": {
+        "folder.Folder": {
             "type": "object",
             "properties": {
                 "color": {
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
                     "type": "string"
                 },
                 "id": {
@@ -1108,7 +2581,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_folder.UpdateInput": {
+        "folder.UpdateInput": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1124,11 +2597,10 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_link.CreateInput": {
+        "link.CreateInput": {
             "type": "object",
             "required": [
-                "dest_url",
-                "workspace_id"
+                "dest_url"
             ],
             "properties": {
                 "description": {
@@ -1204,13 +2676,10 @@ const docTemplate = `{
                 "utm_term": {
                     "type": "string",
                     "maxLength": 200
-                },
-                "workspace_id": {
-                    "type": "string"
                 }
             }
         },
-        "internal_link.Link": {
+        "link.Link": {
             "type": "object",
             "properties": {
                 "click_count": {
@@ -1219,6 +2688,9 @@ const docTemplate = `{
                 },
                 "created_at": {
                     "description": "Timestamps",
+                    "type": "string"
+                },
+                "created_by": {
                     "type": "string"
                 },
                 "created_via": {
@@ -1306,7 +2778,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_link.UpdateInput": {
+        "link.UpdateInput": {
             "type": "object",
             "properties": {
                 "description": {
@@ -1383,7 +2855,53 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_tag.AddToLinkInput": {
+        "rbac.Role": {
+            "type": "string",
+            "enum": [
+                "owner",
+                "admin",
+                "member",
+                "viewer"
+            ],
+            "x-enum-varnames": [
+                "Owner",
+                "Admin",
+                "Member",
+                "Viewer"
+            ]
+        },
+        "rbac.Scope": {
+            "type": "string",
+            "enum": [
+                "links:read",
+                "links:write",
+                "folders:read",
+                "folders:write",
+                "tags:read",
+                "tags:write",
+                "domains:read",
+                "domains:write",
+                "webhooks:read",
+                "webhooks:write",
+                "analytics:read",
+                "workspace:read"
+            ],
+            "x-enum-varnames": [
+                "ScopeLinksRead",
+                "ScopeLinksWrite",
+                "ScopeFoldersRead",
+                "ScopeFoldersWrite",
+                "ScopeTagsRead",
+                "ScopeTagsWrite",
+                "ScopeDomainsRead",
+                "ScopeDomainsWrite",
+                "ScopeWebhooksRead",
+                "ScopeWebhooksWrite",
+                "ScopeAnalyticsRead",
+                "ScopeWorkspaceRead"
+            ]
+        },
+        "tag.AddToLinkInput": {
             "type": "object",
             "required": [
                 "tag_id"
@@ -1394,11 +2912,10 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_tag.CreateInput": {
+        "tag.CreateInput": {
             "type": "object",
             "required": [
-                "name",
-                "workspace_id"
+                "name"
             ],
             "properties": {
                 "color": {
@@ -1408,19 +2925,19 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 1
-                },
-                "workspace_id": {
-                    "type": "string"
                 }
             }
         },
-        "internal_tag.Tag": {
+        "tag.Tag": {
             "type": "object",
             "properties": {
                 "color": {
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "created_by": {
                     "type": "string"
                 },
                 "id": {
@@ -1437,7 +2954,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_tag.UpdateInput": {
+        "tag.UpdateInput": {
             "type": "object",
             "properties": {
                 "color": {
@@ -1447,6 +2964,164 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 50,
                     "minLength": 1
+                }
+            }
+        },
+        "workspace.AcceptInvitationInput": {
+            "type": "object",
+            "required": [
+                "token"
+            ],
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "workspace.CreateInput": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                }
+            }
+        },
+        "workspace.Invitation": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "expires_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/rbac.Role"
+                },
+                "workspace_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "workspace.InviteInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 254
+                },
+                "role": {
+                    "enum": [
+                        "admin",
+                        "member",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/rbac.Role"
+                        }
+                    ]
+                }
+            }
+        },
+        "workspace.Member": {
+            "type": "object",
+            "properties": {
+                "avatar_url": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "joined_at": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/rbac.Role"
+                },
+                "user_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "workspace.UpdateInput": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 1
+                }
+            }
+        },
+        "workspace.UpdateMemberInput": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "enum": [
+                        "admin",
+                        "member",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/rbac.Role"
+                        }
+                    ]
+                }
+            }
+        },
+        "workspace.WithRole": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/rbac.Role"
+                },
+                "slug": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         }
