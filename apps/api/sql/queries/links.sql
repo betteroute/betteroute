@@ -26,17 +26,19 @@ LIMIT 1;
 
 -- name: ResolveLink :one
 -- Redirect hot path: atomic increment + return in one round-trip.
+-- domain_ns scopes lookup: empty string for platform domains, domain ID for custom.
 -- Returns no rows when the link is invalid (deleted, inactive, expired, not started, or click-limited).
 UPDATE links SET
     click_count = click_count + 1,
     last_clicked_at = NOW()
 WHERE short_code = $1
+    AND COALESCE(domain_id, '') = sqlc.arg(domain_ns)::TEXT
     AND deleted_at IS NULL
     AND is_active = TRUE
     AND (starts_at IS NULL OR starts_at <= NOW())
     AND (expires_at IS NULL OR expires_at > NOW())
     AND (max_clicks IS NULL OR click_count < max_clicks)
-RETURNING id, dest_url,
+RETURNING id, workspace_id, dest_url,
     utm_source, utm_medium, utm_campaign, utm_term, utm_content,
     og_title, og_description, og_image;
 
@@ -44,7 +46,9 @@ RETURNING id, dest_url,
 -- Slim diagnostic query: only called when ResolveLink returns 0 rows.
 SELECT is_active, starts_at, expires_at, expiration_url, max_clicks, click_count
 FROM links
-WHERE short_code = $1 AND deleted_at IS NULL
+WHERE short_code = $1
+    AND COALESCE(domain_id, '') = sqlc.arg(domain_ns)::TEXT
+    AND deleted_at IS NULL
 LIMIT 1;
 
 -- name: ListLinksByWorkspace :many

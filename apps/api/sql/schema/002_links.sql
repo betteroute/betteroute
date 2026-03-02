@@ -5,8 +5,9 @@
 CREATE TABLE links (
     id              TEXT PRIMARY KEY,
     workspace_id    TEXT NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-    created_by      TEXT REFERENCES users(id) ON DELETE SET NULL,
+    created_by      TEXT,                         -- FK in 005_auth.sql
     folder_id       TEXT,                         -- optional grouping (FK in 003_folders.sql)
+    domain_id       TEXT,                         -- custom domain (FK in 009_domains.sql)
 
     -- Core
     short_code      TEXT NOT NULL,
@@ -84,16 +85,16 @@ CREATE TABLE links (
         CHECK (created_via IN ('web', 'api', 'import'))
 );
 
--- Unique short_code for active links. Allows reuse after soft delete.
-CREATE UNIQUE INDEX idx_links_short_code_active
-    ON links(short_code)
+-- Unique short_code per domain. COALESCE maps NULL (platform default) to one namespace.
+CREATE UNIQUE INDEX idx_links_domain_short_code_active
+    ON links(COALESCE(domain_id, ''), short_code)
     WHERE deleted_at IS NULL;
 
 -- Redirect hot path. Covering index — no heap fetch needed.
--- Only includes columns checked during redirect resolution.
+-- Keyed by domain + short_code for custom domain resolution.
 CREATE INDEX idx_links_redirect
-    ON links(short_code)
-    INCLUDE (dest_url, is_active, starts_at, expires_at, expiration_url, max_clicks, click_count)
+    ON links(COALESCE(domain_id, ''), short_code)
+    INCLUDE (id, dest_url, is_active, starts_at, expires_at, expiration_url, max_clicks, click_count)
     WHERE deleted_at IS NULL;
 
 -- Dashboard listing by workspace, newest first.

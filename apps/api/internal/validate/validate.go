@@ -30,6 +30,7 @@ func init() {
 	})
 
 	_ = v.RegisterValidation("shortcode", isShortCode)
+	_ = v.RegisterValidation("hostname", isHostname)
 
 	// Unwrap opt.Field[T] so validator sees the inner Value for tag-based checks.
 	v.RegisterCustomTypeFunc(extractOptField,
@@ -97,6 +98,8 @@ func message(fe validator.FieldError) string {
 		return "must be exactly " + fe.Param() + " characters"
 	case "shortcode":
 		return "must contain only letters, numbers, hyphens, and underscores"
+	case "hostname":
+		return "must be a valid hostname (e.g. go.example.com)"
 	default:
 		return "failed " + fe.Tag() + " validation"
 	}
@@ -107,4 +110,11 @@ var shortCodeRe = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 // isShortCode validates that s contains only [a-zA-Z0-9_-].
 func isShortCode(fl validator.FieldLevel) bool {
 	return shortCodeRe.MatchString(fl.Field().String())
+}
+
+var hostnameRe = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+
+// isHostname validates a fully qualified domain name.
+func isHostname(fl validator.FieldLevel) bool {
+	return hostnameRe.MatchString(fl.Field().String())
 }

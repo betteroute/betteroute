@@ -115,3 +115,8 @@ CREATE INDEX idx_verification_tokens_expires
 CREATE INDEX idx_verification_tokens_rate
     ON verification_tokens(email, type, created_at DESC)
     WHERE used_at IS NULL;
+
+-- Deferred FKs: created_by columns declared in 002/003/004 before users existed.
+ALTER TABLE links   ADD CONSTRAINT fk_links_created_by   FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE folders ADD CONSTRAINT fk_folders_created_by FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+ALTER TABLE tags    ADD CONSTRAINT fk_tags_created_by    FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
