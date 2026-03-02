@@ -71,10 +71,14 @@ const (
 	ScopeTagsWrite     Scope = "tags:write"
 	ScopeDomainsRead   Scope = "domains:read"
 	ScopeDomainsWrite  Scope = "domains:write"
+	ScopeAppsRead      Scope = "apps:read"
+	ScopeAppsWrite     Scope = "apps:write"
 	ScopeWebhooksRead  Scope = "webhooks:read"
 	ScopeWebhooksWrite Scope = "webhooks:write"
 	ScopeAnalyticsRead Scope = "analytics:read"
 	ScopeWorkspaceRead Scope = "workspace:read"
+	ScopeBillingRead   Scope = "billing:read"
+	ScopeBillingWrite  Scope = "billing:write"
 )
 
 // Valid reports whether s is a recognised scope string.
@@ -84,8 +88,10 @@ func (s Scope) Valid() bool {
 		ScopeFoldersRead, ScopeFoldersWrite,
 		ScopeTagsRead, ScopeTagsWrite,
 		ScopeDomainsRead, ScopeDomainsWrite,
+		ScopeAppsRead, ScopeAppsWrite,
 		ScopeWebhooksRead, ScopeWebhooksWrite,
-		ScopeAnalyticsRead, ScopeWorkspaceRead:
+		ScopeAnalyticsRead, ScopeWorkspaceRead,
+		ScopeBillingRead, ScopeBillingWrite:
 		return true
 	}
 	return false

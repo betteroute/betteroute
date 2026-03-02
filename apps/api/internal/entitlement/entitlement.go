@@ -5,12 +5,7 @@
 // billing state (which plan a workspace is on) and live usage counters.
 package entitlement
 
-import (
-	"context"
-	"fmt"
-
-	"github.com/execrc/betteroute/internal/errs"
-)
+import "context"
 
 // Tier ranks subscription plans. Higher tiers inherit all lower-tier capabilities.
 type Tier int
@@ -80,16 +75,6 @@ func (f Feature) String() string {
 		return featureNames[f]
 	}
 	return "unknown"
-}
-
-// Check returns nil if the plan includes the feature, or a Forbidden error.
-func (f Feature) Check(ctx Context) error {
-	if ctx.CanAccess(f) {
-		return nil
-	}
-	return errs.Forbidden(fmt.Sprintf(
-		"%s is not available on the %s plan", f, ctx.Plan.Name,
-	))
 }
 
 type Quota int

@@ -56,7 +56,13 @@ func Scope(ctx context.Context, s rbac.Scope) error {
 
 // Feature checks that the workspace plan includes the given feature.
 func Feature(ctx context.Context, f entitlement.Feature) error {
-	return f.Check(entitlement.FromContext(ctx))
+	ent := entitlement.FromContext(ctx)
+	if ent.CanAccess(f) {
+		return nil
+	}
+	return errs.Forbidden(fmt.Sprintf(
+		"%s is not available on the %s plan", f, ent.Plan.Name,
+	))
 }
 
 // Quota checks that the workspace has enough remaining quota to create n units.
