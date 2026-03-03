@@ -9,38 +9,348 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as WorkspaceRouteImport } from './routes/_workspace'
+import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
+import { Route as WorkspaceSlugRouteImport } from './routes/_workspace/$slug'
+import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
+import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
+import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
+import { Route as AuthLoginRouteImport } from './routes/_auth/login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
+import { Route as WorkspaceSlugIndexRouteImport } from './routes/_workspace/$slug/index'
+import { Route as WorkspaceSlugTagsRouteImport } from './routes/_workspace/$slug/tags'
+import { Route as WorkspaceSlugSettingsRouteImport } from './routes/_workspace/$slug/settings'
+import { Route as WorkspaceSlugLinksRouteImport } from './routes/_workspace/$slug/links'
+import { Route as WorkspaceSlugFoldersRouteImport } from './routes/_workspace/$slug/folders'
+import { Route as WorkspaceSlugDomainsRouteImport } from './routes/_workspace/$slug/domains'
+import { Route as WorkspaceSlugAnalyticsRouteImport } from './routes/_workspace/$slug/analytics'
+import { Route as WorkspaceSlugSettingsIndexRouteImport } from './routes/_workspace/$slug/settings/index'
+import { Route as WorkspaceSlugSettingsWebhooksRouteImport } from './routes/_workspace/$slug/settings/webhooks'
+import { Route as WorkspaceSlugSettingsNotificationsRouteImport } from './routes/_workspace/$slug/settings/notifications'
+import { Route as WorkspaceSlugSettingsMembersRouteImport } from './routes/_workspace/$slug/settings/members'
+import { Route as WorkspaceSlugSettingsDomainsRouteImport } from './routes/_workspace/$slug/settings/domains'
+import { Route as WorkspaceSlugSettingsBillingRouteImport } from './routes/_workspace/$slug/settings/billing'
+import { Route as WorkspaceSlugSettingsApiKeysRouteImport } from './routes/_workspace/$slug/settings/api-keys'
 
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceRoute = WorkspaceRouteImport.update({
+  id: '/_workspace',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/_auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkspaceSlugRoute = WorkspaceSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => WorkspaceRoute,
+} as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/verify-email',
+  path: '/verify-email',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRoute,
+} as any)
+const WorkspaceSlugIndexRoute = WorkspaceSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugTagsRoute = WorkspaceSlugTagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugSettingsRoute = WorkspaceSlugSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugLinksRoute = WorkspaceSlugLinksRouteImport.update({
+  id: '/links',
+  path: '/links',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugFoldersRoute = WorkspaceSlugFoldersRouteImport.update({
+  id: '/folders',
+  path: '/folders',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugDomainsRoute = WorkspaceSlugDomainsRouteImport.update({
+  id: '/domains',
+  path: '/domains',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugAnalyticsRoute = WorkspaceSlugAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugSettingsIndexRoute =
+  WorkspaceSlugSettingsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsWebhooksRoute =
+  WorkspaceSlugSettingsWebhooksRouteImport.update({
+    id: '/webhooks',
+    path: '/webhooks',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsNotificationsRoute =
+  WorkspaceSlugSettingsNotificationsRouteImport.update({
+    id: '/notifications',
+    path: '/notifications',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsMembersRoute =
+  WorkspaceSlugSettingsMembersRouteImport.update({
+    id: '/members',
+    path: '/members',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsDomainsRoute =
+  WorkspaceSlugSettingsDomainsRouteImport.update({
+    id: '/domains',
+    path: '/domains',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsBillingRoute =
+  WorkspaceSlugSettingsBillingRouteImport.update({
+    id: '/billing',
+    path: '/billing',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
+const WorkspaceSlugSettingsApiKeysRoute =
+  WorkspaceSlugSettingsApiKeysRouteImport.update({
+    id: '/api-keys',
+    path: '/api-keys',
+    getParentRoute: () => WorkspaceSlugSettingsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
+  '/login': typeof AuthLoginRoute
+  '/reset-password': typeof AuthResetPasswordRoute
+  '/signup': typeof AuthSignupRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
+  '/$slug': typeof WorkspaceSlugRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
+  '/$slug/analytics': typeof WorkspaceSlugAnalyticsRoute
+  '/$slug/domains': typeof WorkspaceSlugDomainsRoute
+  '/$slug/folders': typeof WorkspaceSlugFoldersRoute
+  '/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
+  '/$slug/tags': typeof WorkspaceSlugTagsRoute
+  '/$slug/': typeof WorkspaceSlugIndexRoute
+  '/$slug/settings/api-keys': typeof WorkspaceSlugSettingsApiKeysRoute
+  '/$slug/settings/billing': typeof WorkspaceSlugSettingsBillingRoute
+  '/$slug/settings/domains': typeof WorkspaceSlugSettingsDomainsRoute
+  '/$slug/settings/members': typeof WorkspaceSlugSettingsMembersRoute
+  '/$slug/settings/notifications': typeof WorkspaceSlugSettingsNotificationsRoute
+  '/$slug/settings/webhooks': typeof WorkspaceSlugSettingsWebhooksRoute
+  '/$slug/settings/': typeof WorkspaceSlugSettingsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/onboarding': typeof OnboardingRoute
+  '/forgot-password': typeof AuthForgotPasswordRoute
+  '/login': typeof AuthLoginRoute
+  '/reset-password': typeof AuthResetPasswordRoute
+  '/signup': typeof AuthSignupRoute
+  '/verify-email': typeof AuthVerifyEmailRoute
+  '/auth/callback': typeof AuthCallbackRoute
+  '/$slug/analytics': typeof WorkspaceSlugAnalyticsRoute
+  '/$slug/domains': typeof WorkspaceSlugDomainsRoute
+  '/$slug/folders': typeof WorkspaceSlugFoldersRoute
+  '/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/$slug/tags': typeof WorkspaceSlugTagsRoute
+  '/$slug': typeof WorkspaceSlugIndexRoute
+  '/$slug/settings/api-keys': typeof WorkspaceSlugSettingsApiKeysRoute
+  '/$slug/settings/billing': typeof WorkspaceSlugSettingsBillingRoute
+  '/$slug/settings/domains': typeof WorkspaceSlugSettingsDomainsRoute
+  '/$slug/settings/members': typeof WorkspaceSlugSettingsMembersRoute
+  '/$slug/settings/notifications': typeof WorkspaceSlugSettingsNotificationsRoute
+  '/$slug/settings/webhooks': typeof WorkspaceSlugSettingsWebhooksRoute
+  '/$slug/settings': typeof WorkspaceSlugSettingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_auth': typeof AuthRouteWithChildren
+  '/_workspace': typeof WorkspaceRouteWithChildren
+  '/onboarding': typeof OnboardingRoute
+  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/_auth/login': typeof AuthLoginRoute
+  '/_auth/reset-password': typeof AuthResetPasswordRoute
+  '/_auth/signup': typeof AuthSignupRoute
+  '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_workspace/$slug': typeof WorkspaceSlugRouteWithChildren
+  '/auth/callback': typeof AuthCallbackRoute
+  '/_workspace/$slug/analytics': typeof WorkspaceSlugAnalyticsRoute
+  '/_workspace/$slug/domains': typeof WorkspaceSlugDomainsRoute
+  '/_workspace/$slug/folders': typeof WorkspaceSlugFoldersRoute
+  '/_workspace/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/_workspace/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
+  '/_workspace/$slug/tags': typeof WorkspaceSlugTagsRoute
+  '/_workspace/$slug/': typeof WorkspaceSlugIndexRoute
+  '/_workspace/$slug/settings/api-keys': typeof WorkspaceSlugSettingsApiKeysRoute
+  '/_workspace/$slug/settings/billing': typeof WorkspaceSlugSettingsBillingRoute
+  '/_workspace/$slug/settings/domains': typeof WorkspaceSlugSettingsDomainsRoute
+  '/_workspace/$slug/settings/members': typeof WorkspaceSlugSettingsMembersRoute
+  '/_workspace/$slug/settings/notifications': typeof WorkspaceSlugSettingsNotificationsRoute
+  '/_workspace/$slug/settings/webhooks': typeof WorkspaceSlugSettingsWebhooksRoute
+  '/_workspace/$slug/settings/': typeof WorkspaceSlugSettingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/onboarding'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/$slug'
+    | '/auth/callback'
+    | '/$slug/analytics'
+    | '/$slug/domains'
+    | '/$slug/folders'
+    | '/$slug/links'
+    | '/$slug/settings'
+    | '/$slug/tags'
+    | '/$slug/'
+    | '/$slug/settings/api-keys'
+    | '/$slug/settings/billing'
+    | '/$slug/settings/domains'
+    | '/$slug/settings/members'
+    | '/$slug/settings/notifications'
+    | '/$slug/settings/webhooks'
+    | '/$slug/settings/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/onboarding'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
+    | '/verify-email'
+    | '/auth/callback'
+    | '/$slug/analytics'
+    | '/$slug/domains'
+    | '/$slug/folders'
+    | '/$slug/links'
+    | '/$slug/tags'
+    | '/$slug'
+    | '/$slug/settings/api-keys'
+    | '/$slug/settings/billing'
+    | '/$slug/settings/domains'
+    | '/$slug/settings/members'
+    | '/$slug/settings/notifications'
+    | '/$slug/settings/webhooks'
+    | '/$slug/settings'
+  id:
+    | '__root__'
+    | '/'
+    | '/_auth'
+    | '/_workspace'
+    | '/onboarding'
+    | '/_auth/forgot-password'
+    | '/_auth/login'
+    | '/_auth/reset-password'
+    | '/_auth/signup'
+    | '/_auth/verify-email'
+    | '/_workspace/$slug'
+    | '/auth/callback'
+    | '/_workspace/$slug/analytics'
+    | '/_workspace/$slug/domains'
+    | '/_workspace/$slug/folders'
+    | '/_workspace/$slug/links'
+    | '/_workspace/$slug/settings'
+    | '/_workspace/$slug/tags'
+    | '/_workspace/$slug/'
+    | '/_workspace/$slug/settings/api-keys'
+    | '/_workspace/$slug/settings/billing'
+    | '/_workspace/$slug/settings/domains'
+    | '/_workspace/$slug/settings/members'
+    | '/_workspace/$slug/settings/notifications'
+    | '/_workspace/$slug/settings/webhooks'
+    | '/_workspace/$slug/settings/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthRoute: typeof AuthRouteWithChildren
+  WorkspaceRoute: typeof WorkspaceRouteWithChildren
+  OnboardingRoute: typeof OnboardingRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_workspace': {
+      id: '/_workspace'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof WorkspaceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +358,242 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_workspace/$slug': {
+      id: '/_workspace/$slug'
+      path: '/$slug'
+      fullPath: '/$slug'
+      preLoaderRoute: typeof WorkspaceSlugRouteImport
+      parentRoute: typeof WorkspaceRoute
+    }
+    '/_auth/verify-email': {
+      id: '/_auth/verify-email'
+      path: '/verify-email'
+      fullPath: '/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/signup': {
+      id: '/_auth/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/reset-password': {
+      id: '/_auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/login': {
+      id: '/_auth/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/forgot-password': {
+      id: '/_auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_workspace/$slug/': {
+      id: '/_workspace/$slug/'
+      path: '/'
+      fullPath: '/$slug/'
+      preLoaderRoute: typeof WorkspaceSlugIndexRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/tags': {
+      id: '/_workspace/$slug/tags'
+      path: '/tags'
+      fullPath: '/$slug/tags'
+      preLoaderRoute: typeof WorkspaceSlugTagsRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/settings': {
+      id: '/_workspace/$slug/settings'
+      path: '/settings'
+      fullPath: '/$slug/settings'
+      preLoaderRoute: typeof WorkspaceSlugSettingsRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/links': {
+      id: '/_workspace/$slug/links'
+      path: '/links'
+      fullPath: '/$slug/links'
+      preLoaderRoute: typeof WorkspaceSlugLinksRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/folders': {
+      id: '/_workspace/$slug/folders'
+      path: '/folders'
+      fullPath: '/$slug/folders'
+      preLoaderRoute: typeof WorkspaceSlugFoldersRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/domains': {
+      id: '/_workspace/$slug/domains'
+      path: '/domains'
+      fullPath: '/$slug/domains'
+      preLoaderRoute: typeof WorkspaceSlugDomainsRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/analytics': {
+      id: '/_workspace/$slug/analytics'
+      path: '/analytics'
+      fullPath: '/$slug/analytics'
+      preLoaderRoute: typeof WorkspaceSlugAnalyticsRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/settings/': {
+      id: '/_workspace/$slug/settings/'
+      path: '/'
+      fullPath: '/$slug/settings/'
+      preLoaderRoute: typeof WorkspaceSlugSettingsIndexRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/webhooks': {
+      id: '/_workspace/$slug/settings/webhooks'
+      path: '/webhooks'
+      fullPath: '/$slug/settings/webhooks'
+      preLoaderRoute: typeof WorkspaceSlugSettingsWebhooksRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/notifications': {
+      id: '/_workspace/$slug/settings/notifications'
+      path: '/notifications'
+      fullPath: '/$slug/settings/notifications'
+      preLoaderRoute: typeof WorkspaceSlugSettingsNotificationsRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/members': {
+      id: '/_workspace/$slug/settings/members'
+      path: '/members'
+      fullPath: '/$slug/settings/members'
+      preLoaderRoute: typeof WorkspaceSlugSettingsMembersRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/domains': {
+      id: '/_workspace/$slug/settings/domains'
+      path: '/domains'
+      fullPath: '/$slug/settings/domains'
+      preLoaderRoute: typeof WorkspaceSlugSettingsDomainsRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/billing': {
+      id: '/_workspace/$slug/settings/billing'
+      path: '/billing'
+      fullPath: '/$slug/settings/billing'
+      preLoaderRoute: typeof WorkspaceSlugSettingsBillingRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
+    '/_workspace/$slug/settings/api-keys': {
+      id: '/_workspace/$slug/settings/api-keys'
+      path: '/api-keys'
+      fullPath: '/$slug/settings/api-keys'
+      preLoaderRoute: typeof WorkspaceSlugSettingsApiKeysRouteImport
+      parentRoute: typeof WorkspaceSlugSettingsRoute
+    }
   }
 }
 
+interface AuthRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthSignupRoute: AuthSignupRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
+interface WorkspaceSlugSettingsRouteChildren {
+  WorkspaceSlugSettingsApiKeysRoute: typeof WorkspaceSlugSettingsApiKeysRoute
+  WorkspaceSlugSettingsBillingRoute: typeof WorkspaceSlugSettingsBillingRoute
+  WorkspaceSlugSettingsDomainsRoute: typeof WorkspaceSlugSettingsDomainsRoute
+  WorkspaceSlugSettingsMembersRoute: typeof WorkspaceSlugSettingsMembersRoute
+  WorkspaceSlugSettingsNotificationsRoute: typeof WorkspaceSlugSettingsNotificationsRoute
+  WorkspaceSlugSettingsWebhooksRoute: typeof WorkspaceSlugSettingsWebhooksRoute
+  WorkspaceSlugSettingsIndexRoute: typeof WorkspaceSlugSettingsIndexRoute
+}
+
+const WorkspaceSlugSettingsRouteChildren: WorkspaceSlugSettingsRouteChildren = {
+  WorkspaceSlugSettingsApiKeysRoute: WorkspaceSlugSettingsApiKeysRoute,
+  WorkspaceSlugSettingsBillingRoute: WorkspaceSlugSettingsBillingRoute,
+  WorkspaceSlugSettingsDomainsRoute: WorkspaceSlugSettingsDomainsRoute,
+  WorkspaceSlugSettingsMembersRoute: WorkspaceSlugSettingsMembersRoute,
+  WorkspaceSlugSettingsNotificationsRoute:
+    WorkspaceSlugSettingsNotificationsRoute,
+  WorkspaceSlugSettingsWebhooksRoute: WorkspaceSlugSettingsWebhooksRoute,
+  WorkspaceSlugSettingsIndexRoute: WorkspaceSlugSettingsIndexRoute,
+}
+
+const WorkspaceSlugSettingsRouteWithChildren =
+  WorkspaceSlugSettingsRoute._addFileChildren(
+    WorkspaceSlugSettingsRouteChildren,
+  )
+
+interface WorkspaceSlugRouteChildren {
+  WorkspaceSlugAnalyticsRoute: typeof WorkspaceSlugAnalyticsRoute
+  WorkspaceSlugDomainsRoute: typeof WorkspaceSlugDomainsRoute
+  WorkspaceSlugFoldersRoute: typeof WorkspaceSlugFoldersRoute
+  WorkspaceSlugLinksRoute: typeof WorkspaceSlugLinksRoute
+  WorkspaceSlugSettingsRoute: typeof WorkspaceSlugSettingsRouteWithChildren
+  WorkspaceSlugTagsRoute: typeof WorkspaceSlugTagsRoute
+  WorkspaceSlugIndexRoute: typeof WorkspaceSlugIndexRoute
+}
+
+const WorkspaceSlugRouteChildren: WorkspaceSlugRouteChildren = {
+  WorkspaceSlugAnalyticsRoute: WorkspaceSlugAnalyticsRoute,
+  WorkspaceSlugDomainsRoute: WorkspaceSlugDomainsRoute,
+  WorkspaceSlugFoldersRoute: WorkspaceSlugFoldersRoute,
+  WorkspaceSlugLinksRoute: WorkspaceSlugLinksRoute,
+  WorkspaceSlugSettingsRoute: WorkspaceSlugSettingsRouteWithChildren,
+  WorkspaceSlugTagsRoute: WorkspaceSlugTagsRoute,
+  WorkspaceSlugIndexRoute: WorkspaceSlugIndexRoute,
+}
+
+const WorkspaceSlugRouteWithChildren = WorkspaceSlugRoute._addFileChildren(
+  WorkspaceSlugRouteChildren,
+)
+
+interface WorkspaceRouteChildren {
+  WorkspaceSlugRoute: typeof WorkspaceSlugRouteWithChildren
+}
+
+const WorkspaceRouteChildren: WorkspaceRouteChildren = {
+  WorkspaceSlugRoute: WorkspaceSlugRouteWithChildren,
+}
+
+const WorkspaceRouteWithChildren = WorkspaceRoute._addFileChildren(
+  WorkspaceRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthRoute: AuthRouteWithChildren,
+  WorkspaceRoute: WorkspaceRouteWithChildren,
+  OnboardingRoute: OnboardingRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

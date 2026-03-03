@@ -11,6 +11,11 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,
+    defaultNotFoundComponent: () => (
+      <div className="flex min-h-svh items-center justify-center">
+        <p className="text-muted-foreground text-sm">Page not found</p>
+      </div>
+    ),
   });
 
   return router;
