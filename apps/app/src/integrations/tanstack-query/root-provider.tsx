@@ -10,8 +10,8 @@ import { isApiError, onMutationError } from "@/lib/api";
 
 let context:
   | {
-    queryClient: QueryClient;
-  }
+      queryClient: QueryClient;
+    }
   | undefined;
 
 export function getContext() {
