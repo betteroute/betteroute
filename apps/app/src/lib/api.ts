@@ -2,6 +2,7 @@ import ky, { HTTPError } from "ky";
 import { toast } from "sonner";
 import { env } from "@/env";
 import type { ApiError } from "@/types/common";
+import { authKeys } from "@/features/auth/queries";
 
 /** HTTPError with the RFC 9457 body already parsed and attached. */
 export interface ApiHTTPError extends HTTPError {
@@ -33,6 +34,14 @@ export const api = ky.create({
   timeout: 15_000,
   hooks: {
     afterResponse: [
+      async (_request, _options, response) => {
+        if (response.status === 401) {
+          const { getContext } = await import(
+            "@/integrations/tanstack-query/root-provider"
+          );
+          getContext().queryClient.removeQueries({ queryKey: authKeys.all });
+        }
+      },
       (_request, _options, response) => {
         if (response.status === 429) {
           const retryHeader = response.headers.get("Retry-After");
