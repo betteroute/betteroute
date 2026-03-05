@@ -1,6 +1,5 @@
-import { Loader2 } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
+import { Spinner } from "./spinner";
 
 export function LoadingButton({
   loading,
@@ -16,7 +15,7 @@ export function LoadingButton({
       className={className}
       {...props}
     >
-      {loading && <Loader2 className="mr-2 size-4 animate-spin" />}
+      {loading && <Spinner size="sm" />}
       {children}
     </Button>
   );
