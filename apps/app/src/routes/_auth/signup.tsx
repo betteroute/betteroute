@@ -13,7 +13,7 @@ import { OAuthButtons } from "@/features/auth/components/oauth-buttons";
 import { PasswordInput } from "@/features/auth/components/password-input";
 import { authQueries, signup } from "@/features/auth/queries";
 import { signupSchema } from "@/features/auth/schemas";
-import { getFieldErrors } from "@/lib/api";
+import { getFieldErrors } from "@/lib/errors";
 import { resolveErrors } from "@/lib/form-errors";
 
 export const Route = createFileRoute("/_auth/signup")({

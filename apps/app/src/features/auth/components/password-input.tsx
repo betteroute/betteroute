@@ -27,7 +27,7 @@ export function PasswordInput(props: PasswordInputProps) {
           tabIndex={-1}
           aria-label={visible ? "Hide password" : "Show password"}
         >
-          {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+          {visible ? <EyeOff /> : <Eye />}
         </InputGroupButton>
       </InputGroupAddon>
     </InputGroup>

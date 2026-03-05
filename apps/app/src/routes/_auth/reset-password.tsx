@@ -10,7 +10,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { PasswordInput } from "@/features/auth/components/password-input";
 import { resetPassword } from "@/features/auth/queries";
 import { resetPasswordSchema } from "@/features/auth/schemas";
-import { getFieldErrors } from "@/lib/api";
+import { getFieldErrors } from "@/lib/errors";
 import { resolveErrors } from "@/lib/form-errors";
 
 const searchSchema = z.object({

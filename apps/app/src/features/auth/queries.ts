@@ -1,6 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
 import { env } from "@/env";
 import { api } from "@/lib/api";
+import { QUERY_CACHE } from "@/lib/constants";
 import type {
   ForgotPasswordInput,
   LoginInput,
@@ -19,7 +20,7 @@ export const authQueries = {
     queryOptions({
       queryKey: authKeys.session(),
       queryFn: () => api.get("auth/me").json<User>(),
-      staleTime: 5 * 60 * 1000,
+      staleTime: QUERY_CACHE.SESSION_STALE_TIME,
       retry: false,
       refetchOnWindowFocus: true,
     }),

@@ -10,7 +10,7 @@ import {
   resendVerification,
   verifyEmail,
 } from "@/features/auth/queries";
-import { isApiError } from "@/lib/api";
+import { isApiError } from "@/lib/errors";
 
 const searchSchema = z.object({
   token: z.string().catch(""),
@@ -25,7 +25,7 @@ export const Route = createFileRoute("/_auth/verify-email")({
     if (!deps.token) return { status: "no-token" as const };
     try {
       await verifyEmail(deps.token);
-      context.queryClient.invalidateQueries(authQueries.session());
+      context.queryClient.refetchQueries(authQueries.session());
       return { status: "success" as const };
     } catch (error) {
       return {
