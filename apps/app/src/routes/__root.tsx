@@ -54,7 +54,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <TanStackQueryProvider>
           <TooltipProvider>
             {children}
-            <Toaster richColors closeButton position="top-right" />
+            <Toaster position="bottom-right" />
             <TanStackDevtools
               config={{
                 position: "bottom-right",

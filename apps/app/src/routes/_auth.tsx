@@ -15,10 +15,10 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/_auth")({
   ssr: false,
   validateSearch: searchSchema,
-  beforeLoad: ({ context }) => {
-    const user = context.queryClient.getQueryData(
-      authQueries.session().queryKey,
-    );
+  beforeLoad: async ({ context }) => {
+    const user = await context.queryClient
+      .ensureQueryData(authQueries.session())
+      .catch(() => null);
     if (user) throw redirect({ to: "/" });
   },
   component: AuthShell,
