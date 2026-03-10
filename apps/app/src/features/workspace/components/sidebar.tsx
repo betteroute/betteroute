@@ -75,11 +75,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         {isSettings ? (
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton
-                size="lg"
-                asChild
-                tooltip="Back to workspace"
-              >
+              <SidebarMenuButton size="lg" asChild tooltip="Back to workspace">
                 <Link to="/$slug" params={{ slug: workspace.slug }}>
                   <Avatar className="size-7 rounded-lg after:rounded-lg">
                     <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-semibold">

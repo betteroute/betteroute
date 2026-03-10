@@ -57,7 +57,6 @@ export async function deleteWorkspace(slug: string) {
   await api.delete(`workspaces/${slug}`);
 }
 
-
 export async function updateMemberRole(
   slug: string,
   userId: string,
@@ -71,7 +70,6 @@ export async function updateMemberRole(
 export async function removeMember(slug: string, userId: string) {
   await api.delete(`workspaces/${slug}/members/${userId}`);
 }
-
 
 export async function inviteMember(
   slug: string,

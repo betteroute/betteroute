@@ -1,12 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import {
-  ChevronsUpDown,
-  Keyboard,
-  LogOut,
-  Newspaper,
-  Zap,
-} from "lucide-react";
+import { ChevronsUpDown, Keyboard, LogOut, Newspaper, Zap } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {

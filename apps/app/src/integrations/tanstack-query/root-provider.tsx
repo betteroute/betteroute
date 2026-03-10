@@ -1,13 +1,12 @@
-import type { ReactNode } from "react";
 import {
   MutationCache,
   QueryCache,
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
-
-import { isApiError, onMutationError } from "@/lib/errors";
+import type { ReactNode } from "react";
 import { QUERY_CACHE } from "@/lib/constants";
+import { isApiError, onMutationError } from "@/lib/errors";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,8 +16,7 @@ export const queryClient = new QueryClient({
         // Never retry 401/403/404 — they won't succeed on retry
         if (isApiError(error)) {
           const status = error.apiError.status;
-          if (status === 401 || status === 403 || status === 404)
-            return false;
+          if (status === 401 || status === 403 || status === 404) return false;
         }
         return failureCount < QUERY_CACHE.RETRY_ATTEMPTS;
       },

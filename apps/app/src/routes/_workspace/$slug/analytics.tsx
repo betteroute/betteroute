@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Calendar } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "lucide-react";
 
 export const Route = createFileRoute("/_workspace/$slug/analytics")({
   component: AnalyticsPage,

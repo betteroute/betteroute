@@ -1,9 +1,9 @@
 import ky from "ky";
 import { toast } from "sonner";
 import { env } from "@/env";
+import { authKeys } from "@/features/auth/queries";
 import { queryClient } from "@/integrations/tanstack-query/root-provider";
 import { API_TIMEOUT } from "@/lib/constants";
-import { authKeys } from "@/features/auth/queries";
 import type { ApiError } from "@/types/common";
 import type { ApiHTTPError } from "./errors";
 

@@ -3,13 +3,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { DeleteWorkspaceDialog } from "@/features/workspace/components/delete-dialog";
 import { GeneralForm } from "@/features/workspace/components/general-form";
 
-export const Route = createFileRoute("/_workspace/$slug/settings/")(
-  {
-    staticData: { title: "General" },
+export const Route = createFileRoute("/_workspace/$slug/settings/")({
+  staticData: { title: "General" },
 
-    component: GeneralSettingsPage,
-  },
-);
+  component: GeneralSettingsPage,
+});
 
 function GeneralSettingsPage() {
   return (
