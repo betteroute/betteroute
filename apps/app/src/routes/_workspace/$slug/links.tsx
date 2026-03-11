@@ -1,29 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import {
-  Ban,
-  CalendarClock,
-  ChevronLeft,
-  ChevronRight,
-  CircleCheck,
-  Filter,
-  Search,
-  TimerOff,
-  X,
-} from "lucide-react";
-import { useState } from "react";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { z } from "zod";
 
-import {
-  type FilterDefinition,
-  FilterSheet,
-  type FilterValues,
-} from "@/components/shared/filter-sheet";
+import { DebouncedSearchInput } from "@/components/shared/debounced-search-input";
+import { FilterSheet } from "@/components/shared/filter-sheet";
 import { PageHeader } from "@/components/shared/page-header";
 import { PageLoader } from "@/components/shared/page-loader";
 
 import { Button } from "@/components/ui/button";
-
-import { Input } from "@/components/ui/input";
 
 import { CreateLinkDialog } from "@/features/link/components/create-dialog";
 
@@ -34,67 +19,49 @@ import {
 
 import { LinkCard } from "@/features/link/components/link-card";
 
+import { LINK_FILTERS } from "@/features/link/constants";
 import { linkQueries } from "@/features/link/queries";
 
 import { useWorkspace } from "@/features/workspace/hooks";
 
+const searchSchema = z.object({
+  page: z.number().default(1).catch(1),
+  search: z.string().optional().catch(undefined),
+  status: z.array(z.string()).optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_workspace/$slug/links")({
+  validateSearch: searchSchema,
+  search: {
+    middlewares: [stripSearchParams({ page: 1 })],
+  },
   component: LinksPage,
 });
 
-const LINK_FILTERS: FilterDefinition[] = [
-  {
-    key: "status",
-
-    label: "Status",
-
-    icon: <Filter />,
-
-    options: [
-      { value: "active", label: "Active", icon: <CircleCheck /> },
-
-      { value: "inactive", label: "Inactive", icon: <Ban /> },
-
-      { value: "expired", label: "Expired", icon: <TimerOff /> },
-
-      { value: "scheduled", label: "Scheduled", icon: <CalendarClock /> },
-    ],
-  },
-];
-
 function LinksPage() {
   const { workspace } = useWorkspace();
+  const navigate = Route.useNavigate();
+  const searchParams = Route.useSearch();
 
-  const [page, setPage] = useState(1);
-
-  const [search, setSearch] = useState("");
-
-  const [filterValues, setFilterValues] = useState<FilterValues>({});
-
-  const hasFilters = !!(search || Object.values(filterValues).some(Boolean));
+  const hasFilters = !!(searchParams.search || searchParams.status?.length);
 
   const query = useQuery(
     linkQueries.list(workspace.slug, {
-      page,
-
-      search: search || undefined,
-
-      status: filterValues.status,
+      page: searchParams.page,
+      search: searchParams.search,
+      status: searchParams.status,
     }),
   );
 
   const links = query.data?.data ?? [];
-
   const pagination = query.data?.pagination;
-
   const isEmpty = !query.isLoading && links.length === 0;
 
   function clearAll() {
-    setSearch("");
-
-    setFilterValues({});
-
-    setPage(1);
+    navigate({
+      search: { page: 1 },
+      replace: true,
+    });
   }
 
   return (
@@ -107,39 +74,33 @@ function LinksPage() {
         <div className="flex items-center gap-2">
           <FilterSheet
             filters={LINK_FILTERS}
-            values={filterValues}
+            values={{ status: searchParams.status }}
             onChange={(v) => {
-              setFilterValues(v);
-
-              setPage(1);
+              navigate({
+                search: (prev) => ({
+                  ...prev,
+                  status: v.status,
+                  page: 1,
+                }),
+                replace: true,
+              });
             }}
           />
 
-          <div className="relative ml-auto w-64">
-            <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-
-            <Input
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-
-                setPage(1);
-              }}
-              placeholder="Search links…"
-              className="pl-7"
-            />
-
-            {search && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-                onClick={() => setSearch("")}
-              >
-                <X />
-              </Button>
-            )}
-          </div>
+          <DebouncedSearchInput
+            value={searchParams.search ?? ""}
+            onChange={(value) =>
+              navigate({
+                search: (prev) => ({
+                  ...prev,
+                  search: value || undefined,
+                  page: 1,
+                }),
+                replace: true,
+              })
+            }
+            placeholder="Search links…"
+          />
         </div>
 
         {/* Link cards or empty state */}
@@ -170,7 +131,6 @@ function LinksPage() {
               Showing {(pagination.page - 1) * pagination.per_page + 1}–
               {Math.min(
                 pagination.page * pagination.per_page,
-
                 pagination.total,
               )}{" "}
               of {pagination.total}
@@ -180,8 +140,12 @@ function LinksPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(page - 1)}
-                disabled={page <= 1}
+                onClick={() =>
+                  navigate({
+                    search: (p) => ({ ...p, page: p.page - 1 }),
+                  })
+                }
+                disabled={searchParams.page <= 1}
               >
                 <ChevronLeft />
                 Previous
@@ -190,8 +154,12 @@ function LinksPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= pagination.total_pages}
+                onClick={() =>
+                  navigate({
+                    search: (p) => ({ ...p, page: p.page + 1 }),
+                  })
+                }
+                disabled={searchParams.page >= pagination.total_pages}
               >
                 Next
                 <ChevronRight />

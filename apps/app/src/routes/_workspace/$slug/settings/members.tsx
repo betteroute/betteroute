@@ -1,18 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { Crown, Eye, Search, ShieldCheck, Users, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
+import { z } from "zod";
 
-import {
-  FilterSheet,
-  type FilterValues,
-} from "@/components/shared/filter-sheet";
+import { DebouncedSearchInput } from "@/components/shared/debounced-search-input";
+import { FilterSheet } from "@/components/shared/filter-sheet";
 
 import { PageLoader } from "@/components/shared/page-loader";
-
-import { Button } from "@/components/ui/button";
-
-import { Input } from "@/components/ui/input";
 
 import {
   Table,
@@ -27,54 +21,32 @@ import { InvitationRow } from "@/features/workspace/components/invitation-row";
 import { InviteDialog } from "@/features/workspace/components/invite-dialog";
 
 import { MemberRow } from "@/features/workspace/components/member-row";
+import { ROLE_FILTERS } from "@/features/workspace/constants";
 import { useWorkspace } from "@/features/workspace/hooks";
 import { workspaceQueries } from "@/features/workspace/queries";
-import {
-  type Invitation,
-  type Member,
-  ROLE_INFO,
-  ROLES,
-} from "@/features/workspace/types";
+import type { Invitation, Member } from "@/features/workspace/types";
+
+const membersSearchSchema = z.object({
+  search: z.string().optional().catch(undefined),
+  role: z.array(z.string()).optional().catch(undefined),
+});
 
 export const Route = createFileRoute("/_workspace/$slug/settings/members")({
+  validateSearch: membersSearchSchema,
   staticData: { title: "Members" },
-
   component: MembersSettingsPage,
 });
 
-const ROLE_FILTERS = [
-  {
-    key: "role",
-
-    label: "Role",
-
-    icon: <ShieldCheck />,
-
-    options: ROLES.map((role) => ({
-      value: role,
-
-      label: ROLE_INFO[role]?.label ?? role,
-
-      icon:
-        role === "owner" ? (
-          <Crown />
-        ) : role === "admin" ? (
-          <ShieldCheck />
-        ) : role === "member" ? (
-          <Users />
-        ) : (
-          <Eye />
-        ),
-    })),
-  },
-];
-
 function MembersSettingsPage() {
   const { workspace } = useWorkspace();
+  const navigate = Route.useNavigate();
+  const { search, role: selectedRoles } = Route.useSearch();
+  const searchLower = (search || "").toLowerCase();
 
-  const [search, setSearch] = useState("");
-
-  const [filters, setFilters] = useState<FilterValues>({});
+  const matchesRole = useCallback(
+    (role: string) => !selectedRoles?.length || selectedRoles.includes(role),
+    [selectedRoles],
+  );
 
   const membersQuery = useQuery(workspaceQueries.members(workspace.slug));
 
@@ -84,41 +56,23 @@ function MembersSettingsPage() {
 
   const filteredMembers = useMemo(() => {
     if (!membersQuery.data) return [];
-
-    return membersQuery.data.filter((member) => {
-      const searchLower = search.toLowerCase();
-
-      const matchesSearch =
-        !search ||
-        member.name?.toLowerCase().includes(searchLower) ||
-        member.email?.toLowerCase().includes(searchLower);
-
-      const selectedRoles = filters.role;
-
-      const matchesRole =
-        !selectedRoles?.length || selectedRoles.includes(member.role);
-
-      return matchesSearch && matchesRole;
-    });
-  }, [membersQuery.data, search, filters]);
+    return membersQuery.data.filter(
+      (m) =>
+        (!search ||
+          m.name?.toLowerCase().includes(searchLower) ||
+          m.email?.toLowerCase().includes(searchLower)) &&
+        matchesRole(m.role),
+    );
+  }, [membersQuery.data, search, searchLower, matchesRole]);
 
   const filteredInvitations = useMemo(() => {
     if (!invitationsQuery.data) return [];
-
-    return invitationsQuery.data.filter((invitation) => {
-      const searchLower = search.toLowerCase();
-
-      const matchesSearch =
-        !search || invitation.email.toLowerCase().includes(searchLower);
-
-      const selectedRoles = filters.role;
-
-      const matchesRole =
-        !selectedRoles?.length || selectedRoles.includes(invitation.role);
-
-      return matchesSearch && matchesRole;
-    });
-  }, [invitationsQuery.data, search, filters]);
+    return invitationsQuery.data.filter(
+      (inv) =>
+        (!search || inv.email.toLowerCase().includes(searchLower)) &&
+        matchesRole(inv.role),
+    );
+  }, [invitationsQuery.data, search, searchLower, matchesRole]);
 
   return (
     <div className="space-y-6 p-6">
@@ -137,31 +91,28 @@ function MembersSettingsPage() {
       <div className="flex items-center gap-2">
         <FilterSheet
           filters={ROLE_FILTERS}
-          values={filters}
-          onChange={setFilters}
+          values={{ role: selectedRoles }}
+          onChange={(v) => {
+            navigate({
+              search: (prev) => ({ ...prev, role: v.role }),
+              replace: true,
+            });
+          }}
         />
 
-        <div className="relative ml-auto">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-
-          <Input
-            placeholder="Search members…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-8"
-          />
-
-          {search && (
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
-              onClick={() => setSearch("")}
-            >
-              <X className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
+        <DebouncedSearchInput
+          value={search ?? ""}
+          onChange={(value) =>
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                search: value || undefined,
+              }),
+              replace: true,
+            })
+          }
+          placeholder="Search members…"
+        />
       </div>
 
       <section>
@@ -200,7 +151,7 @@ function MembersSettingsPage() {
           </div>
         ) : (
           <div className="text-muted-foreground text-sm py-8 text-center">
-            {search || filters.role?.length
+            {search || selectedRoles?.length
               ? "No members match your filters."
               : "No members found."}
           </div>
