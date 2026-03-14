@@ -15,14 +15,12 @@ import { Route as WorkspaceIndexRouteImport } from './routes/_workspace/index'
 import { Route as AuthCallbackRouteImport } from './routes/auth/callback'
 import { Route as WorkspaceOnboardingRouteImport } from './routes/_workspace/onboarding'
 import { Route as WorkspaceSlugRouteImport } from './routes/_workspace/$slug'
-import { Route as AuthVerifyEmailRouteImport } from './routes/_auth/verify-email'
-import { Route as AuthSignupRouteImport } from './routes/_auth/signup'
-import { Route as AuthResetPasswordRouteImport } from './routes/_auth/reset-password'
+import { Route as AuthVerifyRouteImport } from './routes/_auth/verify'
 import { Route as AuthLoginRouteImport } from './routes/_auth/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/_auth/forgot-password'
 import { Route as WorkspaceSlugIndexRouteImport } from './routes/_workspace/$slug/index'
 import { Route as WorkspaceSlugTagsRouteImport } from './routes/_workspace/$slug/tags'
 import { Route as WorkspaceSlugSettingsRouteImport } from './routes/_workspace/$slug/settings'
+import { Route as WorkspaceSlugProvisionRouteImport } from './routes/_workspace/$slug/provision'
 import { Route as WorkspaceSlugLinksRouteImport } from './routes/_workspace/$slug/links'
 import { Route as WorkspaceSlugFoldersRouteImport } from './routes/_workspace/$slug/folders'
 import { Route as WorkspaceSlugDomainsRouteImport } from './routes/_workspace/$slug/domains'
@@ -63,29 +61,14 @@ const WorkspaceSlugRoute = WorkspaceSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => WorkspaceRoute,
 } as any)
-const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
-  id: '/verify-email',
-  path: '/verify-email',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => AuthRoute,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
 const WorkspaceSlugIndexRoute = WorkspaceSlugIndexRouteImport.update({
@@ -101,6 +84,11 @@ const WorkspaceSlugTagsRoute = WorkspaceSlugTagsRouteImport.update({
 const WorkspaceSlugSettingsRoute = WorkspaceSlugSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => WorkspaceSlugRoute,
+} as any)
+const WorkspaceSlugProvisionRoute = WorkspaceSlugProvisionRouteImport.update({
+  id: '/provision',
+  path: '/provision',
   getParentRoute: () => WorkspaceSlugRoute,
 } as any)
 const WorkspaceSlugLinksRoute = WorkspaceSlugLinksRouteImport.update({
@@ -168,11 +156,8 @@ const WorkspaceSlugSettingsApiKeysRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof WorkspaceIndexRoute
-  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
-  '/reset-password': typeof AuthResetPasswordRoute
-  '/signup': typeof AuthSignupRoute
-  '/verify-email': typeof AuthVerifyEmailRoute
+  '/verify': typeof AuthVerifyRoute
   '/$slug': typeof WorkspaceSlugRouteWithChildren
   '/onboarding': typeof WorkspaceOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -180,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
   '/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/$slug/': typeof WorkspaceSlugIndexRoute
@@ -193,17 +179,15 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof WorkspaceIndexRoute
-  '/forgot-password': typeof AuthForgotPasswordRoute
   '/login': typeof AuthLoginRoute
-  '/reset-password': typeof AuthResetPasswordRoute
-  '/signup': typeof AuthSignupRoute
-  '/verify-email': typeof AuthVerifyEmailRoute
+  '/verify': typeof AuthVerifyRoute
   '/onboarding': typeof WorkspaceOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/$slug/analytics': typeof WorkspaceSlugAnalyticsRoute
   '/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/$slug': typeof WorkspaceSlugIndexRoute
   '/$slug/settings/api-keys': typeof WorkspaceSlugSettingsApiKeysRoute
@@ -218,11 +202,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_auth': typeof AuthRouteWithChildren
   '/_workspace': typeof WorkspaceRouteWithChildren
-  '/_auth/forgot-password': typeof AuthForgotPasswordRoute
   '/_auth/login': typeof AuthLoginRoute
-  '/_auth/reset-password': typeof AuthResetPasswordRoute
-  '/_auth/signup': typeof AuthSignupRoute
-  '/_auth/verify-email': typeof AuthVerifyEmailRoute
+  '/_auth/verify': typeof AuthVerifyRoute
   '/_workspace/$slug': typeof WorkspaceSlugRouteWithChildren
   '/_workspace/onboarding': typeof WorkspaceOnboardingRoute
   '/auth/callback': typeof AuthCallbackRoute
@@ -231,6 +212,7 @@ export interface FileRoutesById {
   '/_workspace/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/_workspace/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/_workspace/$slug/links': typeof WorkspaceSlugLinksRoute
+  '/_workspace/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/_workspace/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
   '/_workspace/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/_workspace/$slug/': typeof WorkspaceSlugIndexRoute
@@ -246,11 +228,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/forgot-password'
     | '/login'
-    | '/reset-password'
-    | '/signup'
-    | '/verify-email'
+    | '/verify'
     | '/$slug'
     | '/onboarding'
     | '/auth/callback'
@@ -258,6 +237,7 @@ export interface FileRouteTypes {
     | '/$slug/domains'
     | '/$slug/folders'
     | '/$slug/links'
+    | '/$slug/provision'
     | '/$slug/settings'
     | '/$slug/tags'
     | '/$slug/'
@@ -271,17 +251,15 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/forgot-password'
     | '/login'
-    | '/reset-password'
-    | '/signup'
-    | '/verify-email'
+    | '/verify'
     | '/onboarding'
     | '/auth/callback'
     | '/$slug/analytics'
     | '/$slug/domains'
     | '/$slug/folders'
     | '/$slug/links'
+    | '/$slug/provision'
     | '/$slug/tags'
     | '/$slug'
     | '/$slug/settings/api-keys'
@@ -295,11 +273,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/_auth'
     | '/_workspace'
-    | '/_auth/forgot-password'
     | '/_auth/login'
-    | '/_auth/reset-password'
-    | '/_auth/signup'
-    | '/_auth/verify-email'
+    | '/_auth/verify'
     | '/_workspace/$slug'
     | '/_workspace/onboarding'
     | '/auth/callback'
@@ -308,6 +283,7 @@ export interface FileRouteTypes {
     | '/_workspace/$slug/domains'
     | '/_workspace/$slug/folders'
     | '/_workspace/$slug/links'
+    | '/_workspace/$slug/provision'
     | '/_workspace/$slug/settings'
     | '/_workspace/$slug/tags'
     | '/_workspace/$slug/'
@@ -370,25 +346,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspaceSlugRouteImport
       parentRoute: typeof WorkspaceRoute
     }
-    '/_auth/verify-email': {
-      id: '/_auth/verify-email'
-      path: '/verify-email'
-      fullPath: '/verify-email'
-      preLoaderRoute: typeof AuthVerifyEmailRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/signup': {
-      id: '/_auth/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/reset-password': {
-      id: '/_auth/reset-password'
-      path: '/reset-password'
-      fullPath: '/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
+    '/_auth/verify': {
+      id: '/_auth/verify'
+      path: '/verify'
+      fullPath: '/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/login': {
@@ -396,13 +358,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRoute
-    }
-    '/_auth/forgot-password': {
-      id: '/_auth/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_workspace/$slug/': {
@@ -424,6 +379,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/$slug/settings'
       preLoaderRoute: typeof WorkspaceSlugSettingsRouteImport
+      parentRoute: typeof WorkspaceSlugRoute
+    }
+    '/_workspace/$slug/provision': {
+      id: '/_workspace/$slug/provision'
+      path: '/provision'
+      fullPath: '/$slug/provision'
+      preLoaderRoute: typeof WorkspaceSlugProvisionRouteImport
       parentRoute: typeof WorkspaceSlugRoute
     }
     '/_workspace/$slug/links': {
@@ -507,19 +469,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthRouteChildren {
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
-  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
-  AuthSignupRoute: typeof AuthSignupRoute
-  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
+  AuthVerifyRoute: typeof AuthVerifyRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
-  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
-  AuthResetPasswordRoute: AuthResetPasswordRoute,
-  AuthSignupRoute: AuthSignupRoute,
-  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
+  AuthVerifyRoute: AuthVerifyRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -555,6 +511,7 @@ interface WorkspaceSlugRouteChildren {
   WorkspaceSlugDomainsRoute: typeof WorkspaceSlugDomainsRoute
   WorkspaceSlugFoldersRoute: typeof WorkspaceSlugFoldersRoute
   WorkspaceSlugLinksRoute: typeof WorkspaceSlugLinksRoute
+  WorkspaceSlugProvisionRoute: typeof WorkspaceSlugProvisionRoute
   WorkspaceSlugSettingsRoute: typeof WorkspaceSlugSettingsRouteWithChildren
   WorkspaceSlugTagsRoute: typeof WorkspaceSlugTagsRoute
   WorkspaceSlugIndexRoute: typeof WorkspaceSlugIndexRoute
@@ -565,6 +522,7 @@ const WorkspaceSlugRouteChildren: WorkspaceSlugRouteChildren = {
   WorkspaceSlugDomainsRoute: WorkspaceSlugDomainsRoute,
   WorkspaceSlugFoldersRoute: WorkspaceSlugFoldersRoute,
   WorkspaceSlugLinksRoute: WorkspaceSlugLinksRoute,
+  WorkspaceSlugProvisionRoute: WorkspaceSlugProvisionRoute,
   WorkspaceSlugSettingsRoute: WorkspaceSlugSettingsRouteWithChildren,
   WorkspaceSlugTagsRoute: WorkspaceSlugTagsRoute,
   WorkspaceSlugIndexRoute: WorkspaceSlugIndexRoute,

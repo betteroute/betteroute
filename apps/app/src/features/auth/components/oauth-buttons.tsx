@@ -35,7 +35,7 @@ export function OAuthButtons({ disabled }: { disabled?: boolean }) {
           loading={loadingProvider === id}
           onClick={() => handleOAuth(id)}
         >
-          {loadingProvider !== id && <Icon />}
+          {loadingProvider !== id && <Icon data-slot="icon" />}
           {label}
         </LoadingButton>
       ))}

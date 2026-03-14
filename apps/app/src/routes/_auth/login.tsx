@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { LoadingButton } from "@/components/shared/loading-button";
 import {
   Field,
@@ -10,33 +11,30 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { OAuthButtons } from "@/features/auth/components/oauth-buttons";
-import { PasswordInput } from "@/features/auth/components/password-input";
-import { authQueries, login } from "@/features/auth/queries";
-import { loginSchema } from "@/features/auth/schemas";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { sendMagicLink } from "@/features/auth/queries";
+import { magicLinkSchema } from "@/features/auth/schemas";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 
 export const Route = createFileRoute("/_auth/login")({
   component: LoginPage,
 });
 
 function LoginPage() {
-  const queryClient = useQueryClient();
-  const navigate = Route.useNavigate();
-  const { redirect: redirectTo } = Route.useSearch();
+  const [success, setSuccess] = useState(false);
+  const [submittedEmail, setSubmittedEmail] = useState("");
 
   const mutation = useMutation({
-    mutationFn: login,
-    onSuccess: (user) => {
-      queryClient.setQueryData(authQueries.session().queryKey, user);
-      navigate({ href: redirectTo ?? "/" });
+    mutationFn: sendMagicLink,
+    onSuccess: (_, variables) => {
+      setSubmittedEmail(variables.email);
+      setSuccess(true);
     },
   });
 
   const form = useForm({
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "" },
     validators: {
-      onSubmit: loginSchema,
+      onSubmit: magicLinkSchema,
     },
     onSubmit: async ({ value }) => {
       await mutation.mutateAsync(value);
@@ -45,14 +43,32 @@ function LoginPage() {
 
   const serverErrors = getFieldErrors(mutation.error);
 
+  if (success) {
+    return (
+      <div className="flex flex-col gap-6 text-center">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            Please check your email
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            We sent a magic link to <br />
+            <span className="text-foreground font-medium">
+              {submittedEmail}
+            </span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-8">
       <div className="text-center">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Log in to Betteroute
+          Welcome to Betteroute
         </h1>
         <p className="text-muted-foreground mt-1.5 text-sm">
-          Welcome back. Please log in to continue.
+          Please log in to continue
         </p>
       </div>
 
@@ -80,45 +96,12 @@ function LoginPage() {
                 aria-invalid={
                   !!field.state.meta.errors.length || !!serverErrors?.email
                 }
+                className="h-9"
               />
               <FieldError
-                errors={resolveErrors(
+                errors={resolveFieldErrors(
                   field.state.meta.errors,
                   serverErrors?.email,
-                )}
-              />
-            </Field>
-          )}
-        </form.Field>
-
-        <form.Field name="password">
-          {(field) => (
-            <Field>
-              <div className="flex items-center justify-between">
-                <FieldLabel htmlFor={field.name}>Password</FieldLabel>
-                <Link
-                  to="/forgot-password"
-                  className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-              <PasswordInput
-                id={field.name}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                onBlur={field.handleBlur}
-                disabled={mutation.isPending}
-                aria-invalid={
-                  !!field.state.meta.errors.length || !!serverErrors?.password
-                }
-              />
-              <FieldError
-                errors={resolveErrors(
-                  field.state.meta.errors,
-                  serverErrors?.password,
                 )}
               />
             </Field>
@@ -131,23 +114,13 @@ function LoginPage() {
           className="mt-1 w-full"
           loading={mutation.isPending}
         >
-          Log in
+          Continue with email
         </LoadingButton>
       </form>
 
-      <FieldSeparator>or</FieldSeparator>
+      <FieldSeparator>or continue with</FieldSeparator>
 
       <OAuthButtons disabled={mutation.isPending} />
-
-      <p className="text-muted-foreground text-center text-sm">
-        Don&apos;t have an account?{" "}
-        <Link
-          to="/signup"
-          className="text-foreground font-medium hover:underline"
-        >
-          Sign up
-        </Link>
-      </p>
     </div>
   );
 }
