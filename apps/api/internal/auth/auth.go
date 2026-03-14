@@ -1,5 +1,5 @@
-// Package auth handles user authentication: registration, login,
-// session management, email verification, and password reset.
+// Package auth handles user authentication: magic link login, OAuth,
+// session management, and profile updates.
 package auth
 
 import (
@@ -48,12 +48,11 @@ type Session struct {
 type Account struct {
 	ID                string
 	UserID            string
-	Provider          string // "credential" | "google" | "github"
+	Provider          string // "email" | "google" | "github"
 	ProviderAccountID string
-	PasswordHash      string // non-empty only for provider = "credential"
 }
 
-// VerificationToken is a one-time token for email verification or password reset.
+// VerificationToken is a one-time token for magic link authentication.
 // Internal auth plumbing — not exposed in API responses.
 // PlainToken is set before Insert, used by the store to compute and persist the hash.
 type VerificationToken struct {
@@ -61,10 +60,11 @@ type VerificationToken struct {
 	UserID     string
 	Email      string
 	PlainToken string // set by caller; store hashes before persisting
-	Type       string // "email_verification" | "password_reset"
-	ExpiresAt  time.Time
-	UsedAt     *time.Time
-	CreatedAt  time.Time
+	Type       string // "magic_link"
+
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
 }
 
 // SessionMeta carries server-derived HTTP metadata for session creation.
@@ -85,38 +85,15 @@ type Config struct {
 	GitHubClientSecret string
 }
 
-// RegisterInput is the payload for creating a new account via email/password.
-type RegisterInput struct {
-	Name     string `json:"name"     validate:"required,min=1,max=100"`
-	Email    string `json:"email"    validate:"required,email,max=254"`
-	Password string `json:"password" validate:"required,min=8,max=72"`
+// MagicLinkInput requests a one-time login link.
+type MagicLinkInput struct {
+	Email string `json:"email" validate:"required,email,max=254"`
+	Name  string `json:"name"  validate:"omitempty,max=100"` // optional for new users
 }
 
-// LoginInput is the payload for email/password sign-in.
-type LoginInput struct {
-	Email    string `json:"email"    validate:"required,email"`
-	Password string `json:"password" validate:"required"`
-}
-
-// ForgotPasswordInput requests a password reset email.
-type ForgotPasswordInput struct {
-	Email string `json:"email" validate:"required,email"`
-}
-
-// ResetPasswordInput completes a password reset.
-type ResetPasswordInput struct {
-	Token    string `json:"token"    validate:"required"`
-	Password string `json:"password" validate:"required,min=8,max=72"`
-}
-
-// VerifyEmailInput consumes an email verification token.
-type VerifyEmailInput struct {
+// VerifyMagicLinkInput consumes the magic link token to create a session.
+type VerifyMagicLinkInput struct {
 	Token string `json:"token" validate:"required"`
-}
-
-// ResendVerificationInput requests a new verification email.
-type ResendVerificationInput struct {
-	Email string `json:"email" validate:"required,email"`
 }
 
 // UpdateProfileInput is the payload for updating the authenticated user's profile.
@@ -153,7 +130,7 @@ var (
 	// ErrNotFound is returned when a requested user or resource does not exist.
 	ErrNotFound          = errors.New("user not found")
 	ErrEmailTaken        = errors.New("email already in use")
-	ErrInvalidCredential = errors.New("invalid email or password")
+	ErrInvalidCredential = errors.New("invalid credential")
 	ErrSessionNotFound   = errors.New("session not found")
 	ErrTokenInvalid      = errors.New("token is invalid or expired")
 	ErrEmailUnverified   = errors.New("email not verified")

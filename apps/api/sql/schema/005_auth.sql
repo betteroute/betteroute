@@ -32,16 +32,15 @@ CREATE UNIQUE INDEX idx_users_email
     WHERE deleted_at IS NULL;
 
 
--- Accounts (multi-provider: credential, google, github)
--- One user can have multiple accounts (e.g. email+password AND Google).
--- Password lives here, not on users — OAuth-only users have no password row.
+-- Accounts (multi-provider: email, google, github)
+-- One user can have multiple accounts (e.g. email magic-link AND Google).
+-- Identity-only — OAuth and Magic Link accounts map to a single User record.
 
 CREATE TABLE accounts (
     id                  TEXT PRIMARY KEY,
     user_id             TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    provider            TEXT NOT NULL,    -- 'credential', 'google', 'github'
-    provider_account_id TEXT NOT NULL,    -- provider's user ID (email for credential)
-    password_hash       TEXT,             -- only for provider = 'credential'
+    provider            TEXT NOT NULL,    -- 'email', 'google', 'github'
+    provider_account_id TEXT NOT NULL,    -- provider's user ID (email address for 'email' provider)
     created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

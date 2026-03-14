@@ -7,16 +7,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/alexedwards/argon2id"
-
 	"github.com/execrc/betteroute/internal/notify"
 )
 
 const (
 	sessionDuration  = 30 * 24 * time.Hour // 30-day rolling session
-	verificationTTL  = 24 * time.Hour      // email verification link
-	passwordResetTTL = 1 * time.Hour       // password reset link (shorter for security)
-	rateLimitPerHour = 3                   // max verification/reset emails per email per hour
+	magicLinkTTL     = 15 * time.Minute    // Magic link expires quickly for security
+	rateLimitPerHour = 3                   // max magic link emails per email per hour
 )
 
 // Service implements auth business logic.
@@ -37,69 +34,76 @@ func NewService(store *Store, notifier notify.AuthNotifier, cfg Config) *Service
 	}
 }
 
-// Register creates a new user with a credential account and opens a session.
-// A verification email is sent asynchronously — registration succeeds regardless.
-func (s *Service) Register(ctx context.Context, input RegisterInput, meta SessionMeta) (*User, *Session, error) {
+// SendMagicLink issues a one-time token and sends it via email.
+// If the user doesn't exist, they are auto-provisioned to streamline onboarding.
+func (s *Service) SendMagicLink(ctx context.Context, input MagicLinkInput) error {
 	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 	input.Name = strings.TrimSpace(input.Name)
 
-	hash, err := argon2id.CreateHash(input.Password, argon2id.DefaultParams)
-	if err != nil {
-		return nil, nil, fmt.Errorf("hashing password: %w", err)
+	if err := s.checkRateLimit(ctx, input.Email, "magic_link"); err != nil {
+		return err
 	}
-
-	user, err := s.store.InsertUser(ctx, &User{
-		ID:    newUserID(),
-		Name:  input.Name,
-		Email: input.Email,
-	})
-	if err != nil {
-		return nil, nil, err // ErrEmailTaken or wrapped DB error
-	}
-
-	if _, err = s.store.InsertAccount(ctx, &Account{
-		ID:                newAccountID(),
-		UserID:            user.ID,
-		Provider:          "credential",
-		ProviderAccountID: user.Email, // email is the stable credential identifier
-		PasswordHash:      hash,
-	}); err != nil {
-		return nil, nil, fmt.Errorf("creating credential account: %w", err)
-	}
-
-	sess, err := s.createSession(ctx, user.ID, meta)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	// Send verification email in the background — never block registration on email.
-	go s.sendVerificationEmail(context.Background(), user)
-
-	return user, sess, nil
-}
-
-// Login authenticates via email/password and opens a session.
-func (s *Service) Login(ctx context.Context, input LoginInput, meta SessionMeta) (*User, *Session, error) {
-	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
 
 	user, err := s.store.FindUserByEmail(ctx, input.Email)
 	if err != nil {
-		// Return a generic error — never reveal whether the email exists.
-		return nil, nil, ErrInvalidCredential
+		// Auto-provision user. Name is optional — fall back to email prefix.
+		if input.Name == "" {
+			input.Name = strings.Split(input.Email, "@")[0]
+		}
+
+		user, err = s.store.InsertUser(ctx, &User{
+			ID:    newUserID(),
+			Name:  input.Name,
+			Email: input.Email,
+		})
+		if err != nil {
+			return fmt.Errorf("auto-provisioning user: %w", err)
+		}
+
+		if _, err = s.store.InsertAccount(ctx, &Account{
+			ID:                newAccountID(),
+			UserID:            user.ID,
+			Provider:          "email",
+			ProviderAccountID: user.Email,
+		}); err != nil {
+			return fmt.Errorf("creating email account: %w", err)
+		}
 	}
 
+	// Send magic link in the background to keep the API response snappy.
+	go s.sendMagicLinkEmail(context.Background(), user)
+	return nil
+}
+
+// VerifyMagicLink validates the token, marks the email as verified, and opens a session.
+func (s *Service) VerifyMagicLink(ctx context.Context, input VerifyMagicLinkInput, meta SessionMeta) (*User, *Session, error) {
+	vt, err := s.store.FindVerificationTokenByToken(ctx, input.Token)
+	if err != nil {
+		return nil, nil, ErrTokenInvalid
+	}
+	if vt.Type != "magic_link" {
+		return nil, nil, ErrTokenInvalid
+	}
+
+	// Check user status before consuming the token — a suspended user
+	// shouldn't burn a one-time token only to get an error.
+	user, err := s.store.FindUserByID(ctx, vt.UserID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("finding user for magic link: %w", err)
+	}
 	if user.Status == "suspended" || user.Status == "banned" {
 		return nil, nil, ErrAccountSuspended
 	}
 
-	acc, err := s.store.FindAccountByProvider(ctx, "credential", user.Email)
-	if err != nil {
-		return nil, nil, ErrInvalidCredential
+	if err = s.store.MarkVerificationTokenUsed(ctx, vt.ID); err != nil {
+		return nil, nil, fmt.Errorf("consuming magic link token: %w", err)
 	}
 
-	ok, err := argon2id.ComparePasswordAndHash(input.Password, acc.PasswordHash)
-	if err != nil || !ok {
-		return nil, nil, ErrInvalidCredential
+	// First login or never verified — mark email as verified.
+	if user.EmailVerifiedAt == nil {
+		if verifyErr := s.store.UpdateUserEmailVerified(ctx, user.ID); verifyErr != nil {
+			slog.ErrorContext(ctx, "verifying email during magic link", "error", verifyErr, "user_id", user.ID)
+		}
 	}
 
 	sess, err := s.createSession(ctx, user.ID, meta)
@@ -107,7 +111,7 @@ func (s *Service) Login(ctx context.Context, input LoginInput, meta SessionMeta)
 		return nil, nil, err
 	}
 
-	// Update last_login_at asynchronously — not critical path.
+	// Update last_login_at asynchronously.
 	go func() {
 		if err := s.store.UpdateUserLastLogin(context.Background(), user.ID); err != nil {
 			slog.Error("updating last login", "error", err, "user_id", user.ID)
@@ -125,86 +129,6 @@ func (s *Service) Logout(ctx context.Context, sessionID string) error {
 // UpdateProfile applies partial profile updates for the authenticated user.
 func (s *Service) UpdateProfile(ctx context.Context, userID string, input UpdateProfileInput) (*User, error) {
 	return s.store.UpdateUserProfile(ctx, userID, input)
-}
-
-// VerifyEmail validates the token and marks the user's email as verified.
-func (s *Service) VerifyEmail(ctx context.Context, input VerifyEmailInput) error {
-	vt, err := s.store.FindVerificationTokenByToken(ctx, input.Token)
-	if err != nil {
-		return ErrTokenInvalid
-	}
-	if vt.Type != "email_verification" {
-		return ErrTokenInvalid
-	}
-
-	if err = s.store.MarkVerificationTokenUsed(ctx, vt.ID); err != nil {
-		return fmt.Errorf("consuming verification token: %w", err)
-	}
-
-	return s.store.UpdateUserEmailVerified(ctx, vt.UserID)
-}
-
-// ResendVerification sends a new verification email, subject to rate limiting.
-func (s *Service) ResendVerification(ctx context.Context, input ResendVerificationInput) error {
-	email := strings.ToLower(strings.TrimSpace(input.Email))
-
-	if err := s.checkRateLimit(ctx, email, "email_verification"); err != nil {
-		return err
-	}
-
-	user, err := s.store.FindUserByEmail(ctx, email)
-	if err == nil {
-		go s.sendVerificationEmail(context.Background(), user)
-	}
-	return nil
-}
-
-// ForgotPassword sends a password reset email, subject to rate limiting.
-// Always returns nil — never reveals whether the email is registered.
-func (s *Service) ForgotPassword(ctx context.Context, input ForgotPasswordInput) error {
-	email := strings.ToLower(strings.TrimSpace(input.Email))
-
-	if err := s.checkRateLimit(ctx, email, "password_reset"); err != nil {
-		return err
-	}
-
-	user, err := s.store.FindUserByEmail(ctx, email)
-	if err == nil {
-		go s.sendPasswordResetEmail(context.Background(), user)
-	}
-	return nil
-}
-
-// ResetPassword validates the token, updates the password, and invalidates all sessions.
-func (s *Service) ResetPassword(ctx context.Context, input ResetPasswordInput) error {
-	vt, err := s.store.FindVerificationTokenByToken(ctx, input.Token)
-	if err != nil {
-		return ErrTokenInvalid
-	}
-	if vt.Type != "password_reset" {
-		return ErrTokenInvalid
-	}
-
-	hash, err := argon2id.CreateHash(input.Password, argon2id.DefaultParams)
-	if err != nil {
-		return fmt.Errorf("hashing password: %w", err)
-	}
-
-	acc, err := s.store.FindAccountByProvider(ctx, "credential", vt.Email)
-	if err != nil {
-		return ErrNotFound
-	}
-
-	if err = s.store.UpdateAccountPassword(ctx, acc.ID, hash); err != nil {
-		return fmt.Errorf("updating password: %w", err)
-	}
-
-	if err = s.store.MarkVerificationTokenUsed(ctx, vt.ID); err != nil {
-		return fmt.Errorf("consuming reset token: %w", err)
-	}
-
-	// Sign out everywhere — compromised password means compromised sessions.
-	return s.store.DeleteUserSessions(ctx, vt.UserID)
 }
 
 // ValidateSession checks a plain session token and returns the associated user and session.
@@ -257,12 +181,12 @@ func (s *Service) checkRateLimit(ctx context.Context, email, tokenType string) e
 	return nil
 }
 
-// sendVerificationEmail creates a token and sends the verification email.
+// sendMagicLinkEmail creates a token and sends the magic link email.
 // Intended to run in a goroutine — errors are logged, not returned.
-func (s *Service) sendVerificationEmail(ctx context.Context, user *User) {
+func (s *Service) sendMagicLinkEmail(ctx context.Context, user *User) {
 	plain, _, err := generateToken()
 	if err != nil {
-		slog.ErrorContext(ctx, "generating verification token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "generating magic link token", "error", err, "user_id", user.ID)
 		return
 	}
 
@@ -271,42 +195,15 @@ func (s *Service) sendVerificationEmail(ctx context.Context, user *User) {
 		UserID:     user.ID,
 		Email:      user.Email,
 		PlainToken: plain,
-		Type:       "email_verification",
-		ExpiresAt:  time.Now().Add(verificationTTL),
+		Type:       "magic_link",
+		ExpiresAt:  time.Now().Add(magicLinkTTL),
 	}); err != nil {
-		slog.ErrorContext(ctx, "inserting verification token", "error", err, "user_id", user.ID)
+		slog.ErrorContext(ctx, "inserting magic link token", "error", err, "user_id", user.ID)
 		return
 	}
 
-	url := s.cfg.WebURL + "/verify-email?token=" + plain
-	if err = s.notifier.SendVerificationEmail(ctx, user.Email, user.Name, url); err != nil {
-		slog.ErrorContext(ctx, "sending verification email", "error", err, "user_id", user.ID)
-	}
-}
-
-// sendPasswordResetEmail creates a token and sends the reset email.
-// Intended to run in a goroutine — errors are logged, not returned.
-func (s *Service) sendPasswordResetEmail(ctx context.Context, user *User) {
-	plain, _, err := generateToken()
-	if err != nil {
-		slog.ErrorContext(ctx, "generating reset token", "error", err, "user_id", user.ID)
-		return
-	}
-
-	if err = s.store.InsertVerificationToken(ctx, &VerificationToken{
-		ID:         newTokenID(),
-		UserID:     user.ID,
-		Email:      user.Email,
-		PlainToken: plain,
-		Type:       "password_reset",
-		ExpiresAt:  time.Now().Add(passwordResetTTL),
-	}); err != nil {
-		slog.ErrorContext(ctx, "inserting reset token", "error", err, "user_id", user.ID)
-		return
-	}
-
-	url := s.cfg.WebURL + "/reset-password?token=" + plain
-	if err = s.notifier.SendPasswordResetEmail(ctx, user.Email, user.Name, url); err != nil {
-		slog.ErrorContext(ctx, "sending password reset email", "error", err, "user_id", user.ID)
+	url := s.cfg.WebURL + "/verify?token=" + plain
+	if err = s.notifier.SendMagicLinkEmail(ctx, user.Email, user.Name, url); err != nil {
+		slog.ErrorContext(ctx, "sending magic link email", "error", err, "user_id", user.ID)
 	}
 }

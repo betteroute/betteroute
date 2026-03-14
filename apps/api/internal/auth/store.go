@@ -111,14 +111,13 @@ func (s *Store) UpdateUserProfile(ctx context.Context, userID string, input Upda
 	return toUser(row), nil
 }
 
-// InsertAccount creates a new authentication account (password or OAuth).
+// InsertAccount creates a new authentication account (magic link or OAuth).
 func (s *Store) InsertAccount(ctx context.Context, a *Account) (*Account, error) {
 	row, err := s.q.InsertAccount(ctx, sqlc.InsertAccountParams{
 		ID:                a.ID,
 		UserID:            a.UserID,
 		Provider:          a.Provider,
 		ProviderAccountID: a.ProviderAccountID,
-		PasswordHash:      ptr.ToNonZero(a.PasswordHash),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("inserting account: %w", err)
@@ -139,17 +138,6 @@ func (s *Store) FindAccountByProvider(ctx context.Context, provider, providerAcc
 		return nil, fmt.Errorf("querying account by provider: %w", err)
 	}
 	return toAccount(row), nil
-}
-
-// UpdateAccountPassword updates the hashed password for an account.
-func (s *Store) UpdateAccountPassword(ctx context.Context, accountID, passwordHash string) error {
-	if err := s.q.UpdateAccountPassword(ctx, sqlc.UpdateAccountPasswordParams{
-		ID:           accountID,
-		PasswordHash: ptr.ToNonZero(passwordHash),
-	}); err != nil {
-		return fmt.Errorf("updating password for account %s: %w", accountID, err)
-	}
-	return nil
 }
 
 // InsertSession creates a new active session.
@@ -218,7 +206,7 @@ func (s *Store) DeleteUserSessions(ctx context.Context, userID string) error {
 	return nil
 }
 
-// InsertVerificationToken stores a new email verification or password reset token.
+// InsertVerificationToken stores a new magic link token.
 func (s *Store) InsertVerificationToken(ctx context.Context, vt *VerificationToken) error {
 	if err := s.q.InsertVerificationToken(ctx, sqlc.InsertVerificationTokenParams{
 		ID:        vt.ID,
@@ -296,7 +284,6 @@ func toAccount(row sqlc.Account) *Account {
 		UserID:            row.UserID,
 		Provider:          row.Provider,
 		ProviderAccountID: row.ProviderAccountID,
-		PasswordHash:      ptr.From(row.PasswordHash),
 	}
 }
 

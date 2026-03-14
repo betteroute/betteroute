@@ -16,19 +16,19 @@ WHERE lower(email) = sqlc.arg(email) AND deleted_at IS NULL;
 -- name: UpdateUserEmailVerified :exec
 UPDATE users
 SET email_verified_at = NOW(), updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: UpdateUserLastLogin :exec
 UPDATE users
 SET last_login_at = NOW(), updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1 AND deleted_at IS NULL;
 
 
 -- Accounts
 
 -- name: InsertAccount :one
-INSERT INTO accounts (id, user_id, provider, provider_account_id, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+INSERT INTO accounts (id, user_id, provider, provider_account_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
 RETURNING *;
 
 -- name: FindAccountByProvider :one
@@ -39,11 +39,6 @@ WHERE provider = $1 AND provider_account_id = $2;
 SELECT * FROM accounts
 WHERE user_id = $1
 ORDER BY created_at ASC;
-
--- name: UpdateAccountPassword :exec
-UPDATE accounts
-SET password_hash = $2, updated_at = NOW()
-WHERE id = $1;
 
 -- Sessions
 

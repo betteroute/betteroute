@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	useragent "github.com/medama-io/go-useragent"
 
 	"github.com/execrc/betteroute/internal/errs"
 	"github.com/execrc/betteroute/internal/validate"
@@ -17,12 +18,17 @@ const CookieName = "session"
 // Handler handles HTTP requests for auth endpoints.
 type Handler struct {
 	svc           *Service
-	secureCookies bool // controls the Secure flag on session cookies
+	secureCookies bool
+	ua            *useragent.Parser
 }
 
 // NewHandler creates a new auth handler.
 func NewHandler(svc *Service, secureCookies bool) *Handler {
-	return &Handler{svc: svc, secureCookies: secureCookies}
+	return &Handler{
+		svc:           svc,
+		secureCookies: secureCookies,
+		ua:            useragent.NewParser(),
+	}
 }
 
 // Register mounts all auth routes onto the router.
@@ -30,12 +36,8 @@ func (h *Handler) Register(r fiber.Router, authMW fiber.Handler) {
 	a := r.Group("/auth")
 
 	// Public routes — no session required.
-	a.Post("/signup", h.SignUp)
-	a.Post("/login", h.Login)
-	a.Post("/verify-email", h.VerifyEmail)
-	a.Post("/resend-verification", h.ResendVerification)
-	a.Post("/forgot-password", h.ForgotPassword)
-	a.Post("/reset-password", h.ResetPassword)
+	a.Post("/magic-link", h.SendMagicLink)
+	a.Post("/verify-magic-link", h.VerifyMagicLink)
 	a.Get("/oauth/:provider", h.OAuthRedirect)
 	a.Get("/oauth/:provider/callback", h.OAuthCallback)
 
@@ -46,20 +48,20 @@ func (h *Handler) Register(r fiber.Router, authMW fiber.Handler) {
 	protected.Patch("/me", h.UpdateMe)
 }
 
-// @Summary     Sign up
-// @Description Creates a new user account with email and password.
+// @Summary     Request Magic Link
+// @Description Sends a one-time login link to the user's email.
 // @Tags        auth
 // @Accept      json
 // @Produce     json
-// @Param       body body     RegisterInput true "Registration payload"
-// @Success     201  {object} User
+// @Param       body body     MagicLinkInput true "Email address"
+// @Success     204  "No Content"
 // @Failure     400  {object} errs.Error
-// @Failure     409  {object} errs.Error "Email already in use"
 // @Failure     422  {object} errs.Error "Validation failed"
+// @Failure     429  {object} errs.Error "Rate limited"
 // @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/signup [post]
-func (h *Handler) SignUp(c fiber.Ctx) error {
-	var input RegisterInput
+// @Router      /api/v1/auth/magic-link [post]
+func (h *Handler) SendMagicLink(c fiber.Ctx) error {
+	var input MagicLinkInput
 	if err := c.Bind().JSON(&input); err != nil {
 		return errs.BadRequest("invalid request body")
 	}
@@ -67,29 +69,26 @@ func (h *Handler) SignUp(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	user, sess, err := h.svc.Register(c.Context(), input, sessionMeta(c))
-	if err != nil {
+	if err := h.svc.SendMagicLink(c.Context(), input); err != nil {
 		return mapError(err)
 	}
 
-	h.setSessionCookie(c, sess)
-	return c.Status(fiber.StatusCreated).JSON(user)
+	return c.SendStatus(fiber.StatusNoContent)
 }
 
-// @Summary     Log in
-// @Description Authenticates with email and password, returns user and sets session cookie.
+// @Summary     Verify Magic Link
+// @Description Authenticates a user via a magic link token and sets a session cookie.
 // @Tags        auth
 // @Accept      json
 // @Produce     json
-// @Param       body body     LoginInput true "Login payload"
+// @Param       body body     VerifyMagicLinkInput true "Magic link token"
 // @Success     200  {object} User
-// @Failure     400  {object} errs.Error
-// @Failure     401  {object} errs.Error "Invalid credentials"
+// @Failure     400  {object} errs.Error "Token invalid or expired"
 // @Failure     422  {object} errs.Error "Validation failed"
 // @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/login [post]
-func (h *Handler) Login(c fiber.Ctx) error {
-	var input LoginInput
+// @Router      /api/v1/auth/verify-magic-link [post]
+func (h *Handler) VerifyMagicLink(c fiber.Ctx) error {
+	var input VerifyMagicLinkInput
 	if err := c.Bind().JSON(&input); err != nil {
 		return errs.BadRequest("invalid request body")
 	}
@@ -97,7 +96,7 @@ func (h *Handler) Login(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	user, sess, err := h.svc.Login(c.Context(), input, sessionMeta(c))
+	user, sess, err := h.svc.VerifyMagicLink(c.Context(), input, h.sessionMeta(c))
 	if err != nil {
 		return mapError(err)
 	}
@@ -167,104 +166,6 @@ func (h *Handler) UpdateMe(c fiber.Ctx) error {
 	return c.JSON(user)
 }
 
-// @Summary     Verify email
-// @Description Confirms a user's email address with a one-time token.
-// @Tags        auth
-// @Accept      json
-// @Param       body body VerifyEmailInput true "Verification token"
-// @Success     204  "No Content"
-// @Failure     400  {object} errs.Error "Token invalid or expired"
-// @Failure     422  {object} errs.Error "Validation failed"
-// @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/verify-email [post]
-func (h *Handler) VerifyEmail(c fiber.Ctx) error {
-	var input VerifyEmailInput
-	if err := c.Bind().JSON(&input); err != nil {
-		return errs.BadRequest("invalid request body")
-	}
-	if fieldErrs := validate.Struct(input); fieldErrs != nil {
-		return errs.Validation(fieldErrs)
-	}
-
-	if err := h.svc.VerifyEmail(c.Context(), input); err != nil {
-		return mapError(err)
-	}
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// @Summary     Resend verification email
-// @Description Sends a new email verification token to the given address.
-// @Tags        auth
-// @Accept      json
-// @Param       body body ResendVerificationInput true "Email address"
-// @Success     204  "No Content"
-// @Failure     422  {object} errs.Error "Validation failed"
-// @Failure     429  {object} errs.Error "Rate limited"
-// @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/resend-verification [post]
-func (h *Handler) ResendVerification(c fiber.Ctx) error {
-	var input ResendVerificationInput
-	if err := c.Bind().JSON(&input); err != nil {
-		return errs.BadRequest("invalid request body")
-	}
-	if fieldErrs := validate.Struct(input); fieldErrs != nil {
-		return errs.Validation(fieldErrs)
-	}
-
-	if err := h.svc.ResendVerification(c.Context(), input); err != nil {
-		return mapError(err)
-	}
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// @Summary     Forgot password
-// @Description Sends a password reset email. Always returns 204 to prevent email enumeration.
-// @Tags        auth
-// @Accept      json
-// @Param       body body ForgotPasswordInput true "Email address"
-// @Success     204  "No Content"
-// @Failure     422  {object} errs.Error "Validation failed"
-// @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/forgot-password [post]
-func (h *Handler) ForgotPassword(c fiber.Ctx) error {
-	var input ForgotPasswordInput
-	if err := c.Bind().JSON(&input); err != nil {
-		return errs.BadRequest("invalid request body")
-	}
-	if fieldErrs := validate.Struct(input); fieldErrs != nil {
-		return errs.Validation(fieldErrs)
-	}
-
-	// Always 204 — never reveal whether the email is registered.
-	_ = h.svc.ForgotPassword(c.Context(), input)
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
-// @Summary     Reset password
-// @Description Sets a new password using a valid reset token.
-// @Tags        auth
-// @Accept      json
-// @Param       body body ResetPasswordInput true "Token and new password"
-// @Success     204  "No Content"
-// @Failure     400  {object} errs.Error "Token invalid or expired"
-// @Failure     422  {object} errs.Error "Validation failed"
-// @Failure     500  {object} errs.Error
-// @Router      /api/v1/auth/reset-password [post]
-func (h *Handler) ResetPassword(c fiber.Ctx) error {
-	var input ResetPasswordInput
-	if err := c.Bind().JSON(&input); err != nil {
-		return errs.BadRequest("invalid request body")
-	}
-	if fieldErrs := validate.Struct(input); fieldErrs != nil {
-		return errs.Validation(fieldErrs)
-	}
-
-	if err := h.svc.ResetPassword(c.Context(), input); err != nil {
-		return mapError(err)
-	}
-	return c.SendStatus(fiber.StatusNoContent)
-}
-
 // @Summary     OAuth redirect
 // @Description Redirects to the OAuth provider's authorization page.
 // @Tags        auth
@@ -323,7 +224,7 @@ func (h *Handler) OAuthCallback(c fiber.Ctx) error {
 		return errs.BadRequest("missing oauth code")
 	}
 
-	_, sess, err := h.svc.OAuthCallback(c.Context(), provider, code, sessionMeta(c))
+	_, sess, err := h.svc.OAuthCallback(c.Context(), provider, code, h.sessionMeta(c))
 	if err != nil {
 		return mapError(err)
 	}
@@ -340,7 +241,7 @@ func mapError(err error) error {
 	case errors.Is(err, ErrEmailTaken):
 		return errs.Conflict("email already in use")
 	case errors.Is(err, ErrInvalidCredential):
-		return errs.Unauthorized("invalid email or password")
+		return errs.Unauthorized("invalid credentials")
 	case errors.Is(err, ErrAccountSuspended):
 		return errs.Forbidden("account is suspended")
 	case errors.Is(err, ErrTokenInvalid):
@@ -385,9 +286,28 @@ func (h *Handler) clearSessionCookie(c fiber.Ctx) {
 }
 
 // sessionMeta extracts server-side HTTP metadata for session creation.
-func sessionMeta(c fiber.Ctx) SessionMeta {
+func (h *Handler) sessionMeta(c fiber.Ctx) SessionMeta {
+	rawUA := c.Get(fiber.HeaderUserAgent)
+	parsed := h.ua.Parse(rawUA)
+
+	browser := string(parsed.Browser())
+	if browser == "" {
+		browser = "Unknown Browser"
+	}
+
+	version := parsed.BrowserVersionMajor()
+	if version != "" {
+		browser += " " + version
+	}
+
+	uaStr := browser
+	osName := string(parsed.OS())
+	if osName != "" {
+		uaStr += " (" + osName + ")"
+	}
+
 	return SessionMeta{
 		IPAddress: c.IP(),
-		UserAgent: c.Get(fiber.HeaderUserAgent),
+		UserAgent: uaStr,
 	}
 }

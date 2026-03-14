@@ -50,7 +50,7 @@ func (q *Queries) DeleteUserSessions(ctx context.Context, userID string) error {
 }
 
 const findAccountByProvider = `-- name: FindAccountByProvider :one
-SELECT id, user_id, provider, provider_account_id, password_hash, created_at, updated_at FROM accounts
+SELECT id, user_id, provider, provider_account_id, created_at, updated_at FROM accounts
 WHERE provider = $1 AND provider_account_id = $2
 `
 
@@ -67,7 +67,6 @@ func (q *Queries) FindAccountByProvider(ctx context.Context, arg FindAccountByPr
 		&i.UserID,
 		&i.Provider,
 		&i.ProviderAccountID,
-		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -75,7 +74,7 @@ func (q *Queries) FindAccountByProvider(ctx context.Context, arg FindAccountByPr
 }
 
 const findAccountsByUser = `-- name: FindAccountsByUser :many
-SELECT id, user_id, provider, provider_account_id, password_hash, created_at, updated_at FROM accounts
+SELECT id, user_id, provider, provider_account_id, created_at, updated_at FROM accounts
 WHERE user_id = $1
 ORDER BY created_at ASC
 `
@@ -94,7 +93,6 @@ func (q *Queries) FindAccountsByUser(ctx context.Context, userID string) ([]Acco
 			&i.UserID,
 			&i.Provider,
 			&i.ProviderAccountID,
-			&i.PasswordHash,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -248,17 +246,16 @@ func (q *Queries) FindVerificationTokenByHash(ctx context.Context, tokenHash str
 
 const insertAccount = `-- name: InsertAccount :one
 
-INSERT INTO accounts (id, user_id, provider, provider_account_id, password_hash, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-RETURNING id, user_id, provider, provider_account_id, password_hash, created_at, updated_at
+INSERT INTO accounts (id, user_id, provider, provider_account_id, created_at, updated_at)
+VALUES ($1, $2, $3, $4, NOW(), NOW())
+RETURNING id, user_id, provider, provider_account_id, created_at, updated_at
 `
 
 type InsertAccountParams struct {
-	ID                string  `json:"id"`
-	UserID            string  `json:"user_id"`
-	Provider          string  `json:"provider"`
-	ProviderAccountID string  `json:"provider_account_id"`
-	PasswordHash      *string `json:"password_hash"`
+	ID                string `json:"id"`
+	UserID            string `json:"user_id"`
+	Provider          string `json:"provider"`
+	ProviderAccountID string `json:"provider_account_id"`
 }
 
 // Accounts
@@ -268,7 +265,6 @@ func (q *Queries) InsertAccount(ctx context.Context, arg InsertAccountParams) (A
 		arg.UserID,
 		arg.Provider,
 		arg.ProviderAccountID,
-		arg.PasswordHash,
 	)
 	var i Account
 	err := row.Scan(
@@ -276,7 +272,6 @@ func (q *Queries) InsertAccount(ctx context.Context, arg InsertAccountParams) (A
 		&i.UserID,
 		&i.Provider,
 		&i.ProviderAccountID,
-		&i.PasswordHash,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -402,26 +397,10 @@ func (q *Queries) MarkVerificationTokenUsed(ctx context.Context, id string) erro
 	return err
 }
 
-const updateAccountPassword = `-- name: UpdateAccountPassword :exec
-UPDATE accounts
-SET password_hash = $2, updated_at = NOW()
-WHERE id = $1
-`
-
-type UpdateAccountPasswordParams struct {
-	ID           string  `json:"id"`
-	PasswordHash *string `json:"password_hash"`
-}
-
-func (q *Queries) UpdateAccountPassword(ctx context.Context, arg UpdateAccountPasswordParams) error {
-	_, err := q.db.Exec(ctx, updateAccountPassword, arg.ID, arg.PasswordHash)
-	return err
-}
-
 const updateUserEmailVerified = `-- name: UpdateUserEmailVerified :exec
 UPDATE users
 SET email_verified_at = NOW(), updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) UpdateUserEmailVerified(ctx context.Context, id string) error {
@@ -432,7 +411,7 @@ func (q *Queries) UpdateUserEmailVerified(ctx context.Context, id string) error 
 const updateUserLastLogin = `-- name: UpdateUserLastLogin :exec
 UPDATE users
 SET last_login_at = NOW(), updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) UpdateUserLastLogin(ctx context.Context, id string) error {
