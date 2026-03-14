@@ -1,4 +1,4 @@
-import { HTTPError } from "ky";
+import { type HTTPError, isHTTPError } from "ky";
 import { toast } from "sonner";
 import type { ApiError } from "@/types/common";
 
@@ -9,7 +9,7 @@ export interface ApiHTTPError extends HTTPError {
 
 /** Type-guard: narrows an unknown error to an ApiHTTPError. */
 export function isApiError(error: unknown): error is ApiHTTPError {
-  return error instanceof HTTPError && "apiError" in error;
+  return isHTTPError(error) && "apiError" in error;
 }
 
 /** Extract per-field validation errors from an API error (422 responses). */
@@ -26,11 +26,43 @@ export function getFieldErrors(
   return map;
 }
 
-/** Default mutation error handler — shows a toast with the API error detail. */
-export function onMutationError(error: unknown) {
+/** Global error handler — shows a toast with the API error detail. */
+export function onGlobalError(error: unknown) {
   if (isApiError(error)) {
-    toast.error(error.apiError.detail || error.apiError.title);
+    const { status, detail, title, retry_after } = error.apiError;
+    if (status === 429) {
+      toast.error(`Too many requests. Try again in ${retry_after ?? 60}s.`);
+    } else {
+      toast.error(detail || title);
+    }
   } else {
     toast.error("Something went wrong. Please try again.");
   }
+}
+
+/**
+ * Maps TanStack Form field errors into the `{ message?: string }` shape
+ * that the FieldError component expects. Plain string errors are also supported.
+ */
+function fieldErrors(
+  errors: Array<unknown> | undefined,
+): Array<{ message?: string }> | undefined {
+  if (!errors?.length) return undefined;
+  return errors.map((e) => ({
+    message: typeof e === "string" ? e : (e as { message?: string }).message,
+  }));
+}
+
+/**
+ * Merges client-side validation errors with server field errors.
+ * Returns the client errors if present, otherwise the server error for that field.
+ */
+export function resolveFieldErrors(
+  clientErrors: Array<unknown> | undefined,
+  serverError?: string,
+): Array<{ message?: string }> | undefined {
+  return (
+    fieldErrors(clientErrors) ??
+    (serverError ? [{ message: serverError }] : undefined)
+  );
 }
