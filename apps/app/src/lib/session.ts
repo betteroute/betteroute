@@ -26,6 +26,7 @@ export async function ensureSession(
     return { user, workspaces };
   } catch (error) {
     if (isRedirect(error)) throw error;
+
     throw redirect({
       to: "/login",
       search: redirectTo ? { redirect: redirectTo } : undefined,

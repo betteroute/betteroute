@@ -1,8 +1,7 @@
 // Query cache durations (in milliseconds)
 export const QUERY_CACHE = {
-  DEFAULT_STALE_TIME: 60 * 1000, // 1 minute
-  SESSION_STALE_TIME: 5 * 60 * 1000, // 5 minutes
-  DETAIL_STALE_TIME: 2 * 60 * 1000, // 2 minutes
+  DEFAULT_STALE_TIME: 2 * 60 * 1000, // 2 minutes (Standard for Details/Lists)
+  SESSION_STALE_TIME: 5 * 60 * 1000, // 5 minutes (Static Infrastructure)
   RETRY_ATTEMPTS: 1,
 } as const;
 

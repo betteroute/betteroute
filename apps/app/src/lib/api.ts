@@ -1,7 +1,5 @@
 import ky from "ky";
-import { toast } from "sonner";
 import { env } from "@/env";
-import { authKeys } from "@/features/auth/queries";
 import { queryClient } from "@/integrations/tanstack-query/root-provider";
 import { API_TIMEOUT } from "@/lib/constants";
 import type { ApiError } from "@/types/common";
@@ -14,15 +12,13 @@ export const api = ky.create({
   hooks: {
     afterResponse: [
       async (_request, _options, response) => {
-        if (response.status === 401) {
-          queryClient.removeQueries({ queryKey: authKeys.all });
-        }
-      },
-      (_request, _options, response) => {
-        if (response.status === 429) {
-          const retryHeader = response.headers.get("Retry-After");
-          const seconds = retryHeader ? Number.parseInt(retryHeader, 10) : 60;
-          toast.error(`Too many requests. Try again in ${seconds}s.`);
+        if (
+          response.status === 401 &&
+          !window.location.pathname.startsWith("/login") &&
+          !window.location.pathname.startsWith("/verify")
+        ) {
+          queryClient.clear();
+          window.location.replace("/login");
         }
       },
     ],

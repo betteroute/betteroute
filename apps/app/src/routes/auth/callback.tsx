@@ -22,6 +22,7 @@ export const Route = createFileRoute("/auth/callback")({
 
     // Backend already set the session cookie — verify by fetching /me
     try {
+      context.queryClient.clear();
       await context.queryClient.fetchQuery(authQueries.session());
       // Successful auth → go to root (which redirects to first workspace)
       throw redirect({ to: "/" });

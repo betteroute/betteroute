@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { QUERY_CACHE } from "@/lib/constants";
-import { isApiError, onMutationError } from "@/lib/errors";
+import { isApiError, onGlobalError } from "@/lib/errors";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -20,10 +20,6 @@ export const queryClient = new QueryClient({
         }
         return failureCount < QUERY_CACHE.RETRY_ATTEMPTS;
       },
-      refetchOnWindowFocus: false,
-    },
-    mutations: {
-      retry: false,
     },
   },
   queryCache: new QueryCache({
@@ -31,17 +27,15 @@ export const queryClient = new QueryClient({
       // Only show toast for queries that already have data (background refetch failed)
       // Don't toast on initial load failures — the UI should handle those
       if (query.state.data !== undefined) {
-        onMutationError(error);
+        onGlobalError(error);
       }
     },
   }),
   mutationCache: new MutationCache({
-    onError: (error, _variables, _context, mutation) => {
-      // Skip if the mutation has its own onError handler
-      if (mutation.options.onError) return;
+    onError: (error) => {
       // 422 field errors are shown inline by the form — don't double-toast
       if (isApiError(error) && error.apiError.status === 422) return;
-      onMutationError(error);
+      onGlobalError(error);
     },
   }),
 });
@@ -49,13 +43,9 @@ export const queryClient = new QueryClient({
 let context: { queryClient: QueryClient } | undefined;
 
 export function getContext() {
-  if (context) {
-    return context;
-  }
+  if (context) return context;
 
-  context = {
-    queryClient,
-  };
+  context = { queryClient };
 
   return context;
 }
