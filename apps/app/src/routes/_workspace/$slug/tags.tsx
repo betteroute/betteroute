@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { z } from "zod";
@@ -9,7 +9,7 @@ import { PageLoader } from "@/components/shared/page-loader";
 
 import { CreateTagDialog } from "@/features/tag/components/create-dialog";
 
-import { EmptyState } from "@/features/tag/components/empty-state";
+import { TagsEmptyState } from "@/features/tag/components/empty-state";
 
 import { TagRow } from "@/features/tag/components/tag-row";
 
@@ -24,6 +24,10 @@ const tagSearchSchema = z.object({
 
 export const Route = createFileRoute("/_workspace/$slug/tags")({
   validateSearch: tagSearchSchema,
+  loader: async ({ context, params }) => {
+    await context.queryClient.ensureQueryData(tagQueries.list(params.slug));
+  },
+  pendingComponent: PageLoader,
   component: TagsPage,
 });
 
@@ -34,10 +38,9 @@ function TagsPage() {
 
   const [editTag, setEditTag] = useState<Tag | null>(null);
 
-  const query = useQuery(tagQueries.list(workspace.slug));
+  const query = useSuspenseQuery(tagQueries.list(workspace.slug));
 
   const filteredTags = useMemo(() => {
-    if (!query.data) return [];
     const searchLower = (searchParams.search || "").toLowerCase();
     return query.data.filter((tag) => {
       return (
@@ -76,9 +79,7 @@ function TagsPage() {
             placeholder="Search tags…"
           />
         </div>
-        {query.isLoading ? (
-          <PageLoader />
-        ) : filteredTags.length > 0 ? (
+        {filteredTags.length > 0 ? (
           <div className="rounded-lg border">
             {filteredTags.map((tag) => (
               <TagRow
@@ -91,7 +92,7 @@ function TagsPage() {
             ))}
           </div>
         ) : (
-          <EmptyState />
+          <TagsEmptyState />
         )}
       </div>
     </>

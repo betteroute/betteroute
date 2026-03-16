@@ -18,8 +18,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useWorkspace } from "@/features/workspace/hooks";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 
 import { createFolder, folderKeys, updateFolder } from "../queries";
 import { type CreateInput, createSchema, type UpdateInput } from "../schemas";
@@ -91,7 +90,7 @@ export function CreateFolderDialog({
     >
       <DialogTrigger asChild>
         <Button>
-          <Plus />
+          <Plus data-slot="icon" />
           Create folder
         </Button>
       </DialogTrigger>
@@ -125,7 +124,7 @@ export function CreateFolderDialog({
                   aria-invalid={!!field.state.meta.errors.length}
                 />
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.name,
                   )}
@@ -151,7 +150,7 @@ export function CreateFolderDialog({
                   />
                 </div>
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.color,
                   )}

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { MoreVertical, Pencil, Tag as TagIcon, Trash2 } from "lucide-react";
 import { useState } from "react";
 
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -44,7 +45,11 @@ export function TagRow({ tag, onEditClick }: TagRowProps) {
           borderColor: `${tag.color}40`,
         }}
       >
-        <TagIcon className="size-3" style={{ color: tag.color }} />
+        <TagIcon
+          data-slot="icon"
+          className="size-3"
+          style={{ color: tag.color }}
+        />
       </div>
 
       {/* Tag name */}
@@ -61,7 +66,7 @@ export function TagRow({ tag, onEditClick }: TagRowProps) {
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="size-8">
-            <MoreVertical />
+            <MoreVertical data-slot="icon" />
             <span className="sr-only">Open menu</span>
           </Button>
         </DropdownMenuTrigger>
@@ -72,21 +77,25 @@ export function TagRow({ tag, onEditClick }: TagRowProps) {
               onEditClick(tag);
             }}
           >
-            <Pencil className="mr-2 size-4" />
+            <Pencil data-slot="icon" />
             Edit
           </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onClick={() => {
-              setOpen(false);
-              deleteMutation.mutate();
-            }}
-            className="text-destructive focus:text-destructive"
-            disabled={deleteMutation.isPending}
-          >
-            <Trash2 className="mr-2 size-4" />
-            Delete
-          </DropdownMenuItem>
+          <ConfirmDialog
+            trigger={
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onSelect={(e) => e.preventDefault()}
+              >
+                <Trash2 data-slot="icon" />
+                Delete
+              </DropdownMenuItem>
+            }
+            title="Delete tag"
+            description={`This will permanently delete the tag "${tag.name}". It will be removed from all links that use it.`}
+            onConfirm={() => deleteMutation.mutateAsync()}
+            pending={deleteMutation.isPending}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

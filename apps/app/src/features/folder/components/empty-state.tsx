@@ -7,7 +7,7 @@ export function FoldersEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16">
       <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Folder className="size-6 text-muted-foreground" />
+        <Folder data-slot="icon" className="size-6 text-muted-foreground" />
       </div>
       <div className="text-center">
         <h3 className="text-sm font-medium">No folders yet</h3>

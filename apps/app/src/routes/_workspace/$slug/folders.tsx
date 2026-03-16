@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { z } from "zod";
@@ -24,6 +24,10 @@ const folderSearchSchema = z.object({
 
 export const Route = createFileRoute("/_workspace/$slug/folders")({
   validateSearch: folderSearchSchema,
+  loader: async ({ context, params }) => {
+    await context.queryClient.ensureQueryData(folderQueries.list(params.slug));
+  },
+  pendingComponent: PageLoader,
   component: FoldersPage,
 });
 
@@ -34,10 +38,9 @@ function FoldersPage() {
 
   const [editFolder, setEditFolder] = useState<Folder | null>(null);
 
-  const query = useQuery(folderQueries.list(workspace.slug));
+  const query = useSuspenseQuery(folderQueries.list(workspace.slug));
 
   const filteredFolders = useMemo(() => {
-    if (!query.data) return [];
     const searchLower = (searchParams.search || "").toLowerCase();
     return query.data.filter((folder) => {
       return (
@@ -76,9 +79,7 @@ function FoldersPage() {
             placeholder="Search folders…"
           />
         </div>
-        {query.isLoading ? (
-          <PageLoader />
-        ) : filteredFolders.length > 0 ? (
+        {filteredFolders.length > 0 ? (
           <div className="rounded-lg border">
             {filteredFolders.map((folder) => (
               <FolderRow

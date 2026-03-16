@@ -9,5 +9,3 @@ export interface Folder {
   created_at: string;
   updated_at: string;
 }
-
-export type { Folder as FolderWithRole } from "./types";
