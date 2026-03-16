@@ -15,7 +15,7 @@ export function LoadingButton({
       className={className}
       {...props}
     >
-      {loading && <Spinner size="sm" />}
+      {loading && <Spinner size="sm" data-slot="icon" />}
       {children}
     </Button>
   );

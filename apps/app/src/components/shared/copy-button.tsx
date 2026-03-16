@@ -39,7 +39,7 @@ export function CopyButton({
       title="Copy to clipboard"
       {...props}
     >
-      {hasCopied ? <Check /> : <Copy />}
+      {hasCopied ? <Check data-slot="icon" /> : <Copy data-slot="icon" />}
     </Button>
   );
 }

@@ -28,7 +28,10 @@ export function DebouncedSearchInput({
 
   return (
     <div className="relative ml-auto w-64">
-      <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+      <Search
+        data-slot="icon"
+        className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+      />
 
       <Input
         value={input}
@@ -51,7 +54,7 @@ export function DebouncedSearchInput({
             onChange("");
           }}
         >
-          <X />
+          <X data-slot="icon" />
         </Button>
       )}
     </div>

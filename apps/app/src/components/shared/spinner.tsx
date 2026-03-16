@@ -12,7 +12,11 @@ const sizeClasses = {
   lg: "size-8",
 };
 
-export function Spinner({ className, size = "md" }: SpinnerProps) {
+export function Spinner({
+  className,
+  size = "md",
+  ...props
+}: SpinnerProps & React.ComponentProps<typeof Loader2>) {
   return (
     <Loader2
       className={cn(
@@ -20,6 +24,7 @@ export function Spinner({ className, size = "md" }: SpinnerProps) {
         sizeClasses[size],
         className,
       )}
+      {...props}
     />
   );
 }

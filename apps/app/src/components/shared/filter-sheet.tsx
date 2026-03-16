@@ -55,7 +55,7 @@ export function FilterSheet({ filters, values, onChange }: FilterSheetProps) {
           className="text-muted-foreground hover:text-destructive h-7 px-2"
           onClick={() => onChange({})}
         >
-          <X className="mr-1" />
+          <X data-slot="icon" className="mr-1" />
           Clear
         </Button>
       )}
@@ -128,7 +128,7 @@ function FacetedFilter({
                   className="relative"
                 >
                   {selectedSet.has(option.value) && (
-                    <Check className="absolute right-2" />
+                    <Check data-slot="icon" className="absolute right-2" />
                   )}
                   {option.icon && (
                     <span className="text-muted-foreground mr-0.5">

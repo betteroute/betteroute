@@ -28,7 +28,7 @@ export function Favicon({ url, className, ...props }: FaviconProps) {
           onError={() => setHasError(true)}
         />
       ) : (
-        <Link2 className="size-4 text-muted-foreground" />
+        <Link2 data-slot="icon" className="size-4 text-muted-foreground" />
       )}
     </div>
   );
