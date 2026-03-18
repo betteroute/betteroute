@@ -9,271 +9,63 @@ import (
 	"context"
 )
 
-const decrementAPIKeyActive = `-- name: DecrementAPIKeyActive :execrows
+const incrementUsage = `-- name: IncrementUsage :execrows
 UPDATE workspace_usage SET
-    api_keys_active = api_keys_active - $2,
+    links_usage = CASE WHEN $2::BOOLEAN THEN links_usage + $3::INT ELSE links_usage END,
+    clicks_usage = CASE WHEN $4::BOOLEAN THEN clicks_usage + $3::BIGINT ELSE clicks_usage END,
     updated_at = NOW()
-WHERE workspace_id = $1 AND api_keys_active >= $2
-`
-
-type DecrementAPIKeyActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	ApiKeysActive int32  `json:"api_keys_active"`
-}
-
-func (q *Queries) DecrementAPIKeyActive(ctx context.Context, arg DecrementAPIKeyActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, decrementAPIKeyActive, arg.WorkspaceID, arg.ApiKeysActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const decrementDomainActive = `-- name: DecrementDomainActive :execrows
-UPDATE workspace_usage SET
-    domains_active = domains_active - $2,
-    updated_at = NOW()
-WHERE workspace_id = $1 AND domains_active >= $2
-`
-
-type DecrementDomainActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	DomainsActive int32  `json:"domains_active"`
-}
-
-func (q *Queries) DecrementDomainActive(ctx context.Context, arg DecrementDomainActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, decrementDomainActive, arg.WorkspaceID, arg.DomainsActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const decrementFolderActive = `-- name: DecrementFolderActive :execrows
-UPDATE workspace_usage SET
-    folders_active = folders_active - $2,
-    updated_at = NOW()
-WHERE workspace_id = $1 AND folders_active >= $2
-`
-
-type DecrementFolderActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	FoldersActive int32  `json:"folders_active"`
-}
-
-func (q *Queries) DecrementFolderActive(ctx context.Context, arg DecrementFolderActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, decrementFolderActive, arg.WorkspaceID, arg.FoldersActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const decrementMemberActive = `-- name: DecrementMemberActive :execrows
-UPDATE workspace_usage SET
-    members_active = members_active - $2,
-    updated_at = NOW()
-WHERE workspace_id = $1 AND members_active >= $2
-`
-
-type DecrementMemberActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	MembersActive int32  `json:"members_active"`
-}
-
-func (q *Queries) DecrementMemberActive(ctx context.Context, arg DecrementMemberActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, decrementMemberActive, arg.WorkspaceID, arg.MembersActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const decrementWebhookActive = `-- name: DecrementWebhookActive :execrows
-UPDATE workspace_usage SET
-    webhooks_active = webhooks_active - $2,
-    updated_at = NOW()
-WHERE workspace_id = $1 AND webhooks_active >= $2
-`
-
-type DecrementWebhookActiveParams struct {
-	WorkspaceID    string `json:"workspace_id"`
-	WebhooksActive int32  `json:"webhooks_active"`
-}
-
-func (q *Queries) DecrementWebhookActive(ctx context.Context, arg DecrementWebhookActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, decrementWebhookActive, arg.WorkspaceID, arg.WebhooksActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const findWorkspaceUsage = `-- name: FindWorkspaceUsage :one
-SELECT workspace_id, links_usage, clicks_usage, domains_active, webhooks_active, api_keys_active, members_active, folders_active, tags_active, over_quota, usage_period_start, usage_period_end, created_at, updated_at FROM workspace_usage
 WHERE workspace_id = $1
+  AND usage_period_end > NOW()
+  AND EXISTS (SELECT 1 FROM workspaces WHERE id = $1 AND deleted_at IS NULL)
 `
 
-func (q *Queries) FindWorkspaceUsage(ctx context.Context, workspaceID string) (WorkspaceUsage, error) {
-	row := q.db.QueryRow(ctx, findWorkspaceUsage, workspaceID)
-	var i WorkspaceUsage
-	err := row.Scan(
-		&i.WorkspaceID,
-		&i.LinksUsage,
-		&i.ClicksUsage,
-		&i.DomainsActive,
-		&i.WebhooksActive,
-		&i.ApiKeysActive,
-		&i.MembersActive,
-		&i.FoldersActive,
-		&i.TagsActive,
-		&i.OverQuota,
-		&i.UsagePeriodStart,
-		&i.UsagePeriodEnd,
-		&i.CreatedAt,
-		&i.UpdatedAt,
+type IncrementUsageParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	IsLinks     bool   `json:"is_links"`
+	Delta       int32  `json:"delta"`
+	IsClicks    bool   `json:"is_clicks"`
+}
+
+func (q *Queries) IncrementUsage(ctx context.Context, arg IncrementUsageParams) (int64, error) {
+	result, err := q.db.Exec(ctx, incrementUsage,
+		arg.WorkspaceID,
+		arg.IsLinks,
+		arg.Delta,
+		arg.IsClicks,
 	)
-	return i, err
-}
-
-const incrementAPIKeyActive = `-- name: IncrementAPIKeyActive :execrows
-UPDATE workspace_usage SET
-    api_keys_active = api_keys_active + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1
-`
-
-type IncrementAPIKeyActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	ApiKeysActive int32  `json:"api_keys_active"`
-}
-
-func (q *Queries) IncrementAPIKeyActive(ctx context.Context, arg IncrementAPIKeyActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementAPIKeyActive, arg.WorkspaceID, arg.ApiKeysActive)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const incrementClickUsage = `-- name: IncrementClickUsage :execrows
+const rolloverUsageCycle = `-- name: RolloverUsageCycle :execrows
 UPDATE workspace_usage SET
-    clicks_usage = clicks_usage + $2,
+    links_usage = 0,
+    clicks_usage = 0,
+    usage_period_start = usage_period_end,
+    usage_period_end = usage_period_end + interval '1 month',
     updated_at = NOW()
-WHERE workspace_id = $1 AND usage_period_end > NOW()
+WHERE workspace_id = $1 AND usage_period_end <= NOW()
 `
 
-type IncrementClickUsageParams struct {
-	WorkspaceID string `json:"workspace_id"`
-	ClicksUsage int64  `json:"clicks_usage"`
-}
-
-// Consumable: async increment triggered by the link resolver.
-func (q *Queries) IncrementClickUsage(ctx context.Context, arg IncrementClickUsageParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementClickUsage, arg.WorkspaceID, arg.ClicksUsage)
+// Resets consumable counters natively when the exact billing anniversary period has expired.
+// No-op if the cycle is still active (idempotent).
+func (q *Queries) RolloverUsageCycle(ctx context.Context, workspaceID string) (int64, error) {
+	result, err := q.db.Exec(ctx, rolloverUsageCycle, workspaceID)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
 }
 
-const incrementDomainActive = `-- name: IncrementDomainActive :execrows
-UPDATE workspace_usage SET
-    domains_active = domains_active + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1
+const upsertWorkspaceUsage = `-- name: UpsertWorkspaceUsage :exec
+INSERT INTO workspace_usage (workspace_id)
+VALUES ($1)
+ON CONFLICT (workspace_id) DO NOTHING
 `
 
-type IncrementDomainActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	DomainsActive int32  `json:"domains_active"`
-}
-
-func (q *Queries) IncrementDomainActive(ctx context.Context, arg IncrementDomainActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementDomainActive, arg.WorkspaceID, arg.DomainsActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const incrementFolderActive = `-- name: IncrementFolderActive :execrows
-UPDATE workspace_usage SET
-    folders_active = folders_active + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1
-`
-
-type IncrementFolderActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	FoldersActive int32  `json:"folders_active"`
-}
-
-func (q *Queries) IncrementFolderActive(ctx context.Context, arg IncrementFolderActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementFolderActive, arg.WorkspaceID, arg.FoldersActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const incrementLinkUsage = `-- name: IncrementLinkUsage :execrows
-UPDATE workspace_usage SET
-    links_usage = links_usage + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1 AND usage_period_end > NOW()
-`
-
-type IncrementLinkUsageParams struct {
-	WorkspaceID string `json:"workspace_id"`
-	LinksUsage  int32  `json:"links_usage"`
-}
-
-// Consumable: fails if the usage cycle has ended, preventing billing drift.
-func (q *Queries) IncrementLinkUsage(ctx context.Context, arg IncrementLinkUsageParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementLinkUsage, arg.WorkspaceID, arg.LinksUsage)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const incrementMemberActive = `-- name: IncrementMemberActive :execrows
-UPDATE workspace_usage SET
-    members_active = members_active + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1
-`
-
-type IncrementMemberActiveParams struct {
-	WorkspaceID   string `json:"workspace_id"`
-	MembersActive int32  `json:"members_active"`
-}
-
-func (q *Queries) IncrementMemberActive(ctx context.Context, arg IncrementMemberActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementMemberActive, arg.WorkspaceID, arg.MembersActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
-}
-
-const incrementWebhookActive = `-- name: IncrementWebhookActive :execrows
-UPDATE workspace_usage SET
-    webhooks_active = webhooks_active + $2,
-    updated_at = NOW()
-WHERE workspace_id = $1
-`
-
-type IncrementWebhookActiveParams struct {
-	WorkspaceID    string `json:"workspace_id"`
-	WebhooksActive int32  `json:"webhooks_active"`
-}
-
-func (q *Queries) IncrementWebhookActive(ctx context.Context, arg IncrementWebhookActiveParams) (int64, error) {
-	result, err := q.db.Exec(ctx, incrementWebhookActive, arg.WorkspaceID, arg.WebhooksActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
+func (q *Queries) UpsertWorkspaceUsage(ctx context.Context, workspaceID string) error {
+	_, err := q.db.Exec(ctx, upsertWorkspaceUsage, workspaceID)
+	return err
 }

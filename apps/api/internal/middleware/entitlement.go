@@ -15,6 +15,7 @@ import (
 
 type entitlementQuerier interface {
 	FindEntitlement(ctx context.Context, workspaceID string) (sqlc.FindEntitlementRow, error)
+	RolloverUsageCycle(ctx context.Context, workspaceID string) (int64, error)
 }
 
 // Entitlement resolves the capability matrix for the current workspace.
@@ -23,9 +24,12 @@ func Entitlement(q entitlementQuerier) fiber.Handler {
 	return func(c fiber.Ctx) error {
 		workspaceID := rbac.FromContext(c.Context()).WorkspaceID
 
+		// Idempotent constraint (<= NOW()) prevents Postgres lock contention unless expired.
+		_, _ = q.RolloverUsageCycle(c.Context(), workspaceID)
+
 		row, err := q.FindEntitlement(c.Context(), workspaceID)
 		if errors.Is(err, pgx.ErrNoRows) {
-			ent := entitlement.Resolve("free", entitlement.Overrides{}, entitlement.Usage{})
+			ent := entitlement.Resolve("free", entitlement.Usage{})
 			c.SetContext(entitlement.NewContext(c.Context(), ent))
 			return c.Next()
 		}
@@ -43,9 +47,7 @@ func Entitlement(q entitlementQuerier) fiber.Handler {
 		usage[entitlement.QuotaFolders] = int64(row.FoldersActive)
 		usage[entitlement.QuotaTags] = int64(row.TagsActive)
 
-		overrides := entitlement.ParseOverrides(row.CustomQuotas, row.CustomFeatures)
-
-		ent := entitlement.Resolve(row.PlanID, overrides, usage)
+		ent := entitlement.Resolve(row.PlanID, usage)
 		c.SetContext(entitlement.NewContext(c.Context(), ent))
 		return c.Next()
 	}

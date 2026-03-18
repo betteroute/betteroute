@@ -7,41 +7,34 @@ package sqlc
 
 import (
 	"context"
-	"encoding/json"
 )
 
 const findEntitlement = `-- name: FindEntitlement :one
 SELECT
     s.plan_id,
-    s.custom_quotas,
-    s.custom_features,
     COALESCE(u.links_usage,    0)    AS links_usage,
     COALESCE(u.clicks_usage,   0)    AS clicks_usage,
-    COALESCE(u.domains_active, 0)    AS domains_active,
-    COALESCE(u.webhooks_active, 0)   AS webhooks_active,
-    COALESCE(u.api_keys_active, 0)   AS api_keys_active,
-    COALESCE(u.members_active,  0)   AS members_active,
-    COALESCE(u.folders_active,  0)   AS folders_active,
-    COALESCE(u.tags_active,    0)   AS tags_active,
-    COALESCE(u.over_quota,     '{}') AS over_quota
+    (SELECT COUNT(*) FROM domains WHERE domains.workspace_id = $1)::integer AS domains_active,
+    (SELECT COUNT(*) FROM workspace_apps WHERE workspace_apps.workspace_id = $1)::integer AS webhooks_active,
+    (SELECT COUNT(*) FROM api_keys WHERE api_keys.workspace_id = $1)::integer AS api_keys_active,
+    (SELECT COUNT(*) FROM workspace_members WHERE workspace_members.workspace_id = $1)::integer AS members_active,
+    (SELECT COUNT(*) FROM folders WHERE folders.workspace_id = $1)::integer AS folders_active,
+    (SELECT COUNT(*) FROM tags WHERE tags.workspace_id = $1)::integer AS tags_active
 FROM   subscriptions s
 LEFT   JOIN workspace_usage u ON u.workspace_id = s.workspace_id
 WHERE  s.workspace_id = $1
 `
 
 type FindEntitlementRow struct {
-	PlanID         string          `json:"plan_id"`
-	CustomQuotas   []byte          `json:"custom_quotas"`
-	CustomFeatures []byte          `json:"custom_features"`
-	LinksUsage     int32           `json:"links_usage"`
-	ClicksUsage    int64           `json:"clicks_usage"`
-	DomainsActive  int32           `json:"domains_active"`
-	WebhooksActive int32           `json:"webhooks_active"`
-	ApiKeysActive  int32           `json:"api_keys_active"`
-	MembersActive  int32           `json:"members_active"`
-	FoldersActive  int32           `json:"folders_active"`
-	TagsActive     int32           `json:"tags_active"`
-	OverQuota      json.RawMessage `json:"over_quota"`
+	PlanID         string `json:"plan_id"`
+	LinksUsage     int32  `json:"links_usage"`
+	ClicksUsage    int64  `json:"clicks_usage"`
+	DomainsActive  int32  `json:"domains_active"`
+	WebhooksActive int32  `json:"webhooks_active"`
+	ApiKeysActive  int32  `json:"api_keys_active"`
+	MembersActive  int32  `json:"members_active"`
+	FoldersActive  int32  `json:"folders_active"`
+	TagsActive     int32  `json:"tags_active"`
 }
 
 // Middleware hot path: resolves the full entitlement payload for a workspace
@@ -56,8 +49,6 @@ func (q *Queries) FindEntitlement(ctx context.Context, workspaceID string) (Find
 	var i FindEntitlementRow
 	err := row.Scan(
 		&i.PlanID,
-		&i.CustomQuotas,
-		&i.CustomFeatures,
 		&i.LinksUsage,
 		&i.ClicksUsage,
 		&i.DomainsActive,
@@ -66,7 +57,6 @@ func (q *Queries) FindEntitlement(ctx context.Context, workspaceID string) (Find
 		&i.MembersActive,
 		&i.FoldersActive,
 		&i.TagsActive,
-		&i.OverQuota,
 	)
 	return i, err
 }
