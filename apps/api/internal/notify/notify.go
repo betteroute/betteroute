@@ -7,10 +7,9 @@ import (
 	"log/slog"
 )
 
-// AuthNotifier sends auth-related notifications (verification, password reset).
+// AuthNotifier sends auth-related notifications (magic link).
 type AuthNotifier interface {
-	SendVerificationEmail(ctx context.Context, to, name, verificationURL string) error
-	SendPasswordResetEmail(ctx context.Context, to, name, resetURL string) error
+	SendMagicLinkEmail(ctx context.Context, to, name, magicLinkURL string) error
 }
 
 // TeamNotifier sends team collaboration notifications (workspace invites).
@@ -32,13 +31,8 @@ type nop struct{}
 // Nop returns a Notifier that warns on each dropped notification.
 func Nop() Notifier { return nop{} }
 
-func (nop) SendVerificationEmail(ctx context.Context, to, _, _ string) error {
-	slog.WarnContext(ctx, "notification dropped: verification email", "to", to)
-	return nil
-}
-
-func (nop) SendPasswordResetEmail(ctx context.Context, to, _, _ string) error {
-	slog.WarnContext(ctx, "notification dropped: password reset email", "to", to)
+func (nop) SendMagicLinkEmail(ctx context.Context, to, _, _ string) error {
+	slog.WarnContext(ctx, "notification dropped: magic link email", "to", to)
 	return nil
 }
 

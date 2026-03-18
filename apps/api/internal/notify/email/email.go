@@ -24,17 +24,9 @@ func New(apiKey, from string) *Mailer {
 	}
 }
 
-// SendVerificationEmail sends an email to verify a new user's email address.
-func (m *Mailer) SendVerificationEmail(_ context.Context, to, name, url string) error {
-	return m.send(to, "Verify your email — Betteroute", "verification", map[string]string{
-		"Name": name,
-		"URL":  url,
-	})
-}
-
-// SendPasswordResetEmail sends an email with a secure link to reset a forgotten password.
-func (m *Mailer) SendPasswordResetEmail(_ context.Context, to, name, url string) error {
-	return m.send(to, "Reset your password — Betteroute", "password_reset", map[string]string{
+// SendMagicLinkEmail sends a one-time magic link for passwordless login.
+func (m *Mailer) SendMagicLinkEmail(_ context.Context, to, name, url string) error {
+	return m.send(to, "Log in to Betteroute", "magic_link", map[string]string{
 		"Name": name,
 		"URL":  url,
 	})
