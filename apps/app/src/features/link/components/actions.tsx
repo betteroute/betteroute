@@ -32,7 +32,7 @@ export function LinkActions({ link }: { link: Link }) {
   const deleteMutation = useMutation({
     mutationFn: () => deleteLink(workspace.slug, link.id),
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: linkKeys.all });
+      await queryClient.invalidateQueries({ queryKey: linkKeys.all });
     },
   });
 
@@ -40,7 +40,7 @@ export function LinkActions({ link }: { link: Link }) {
     <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon-sm">
-          <MoreVertical />
+          <MoreVertical data-slot="icon" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -51,24 +51,24 @@ export function LinkActions({ link }: { link: Link }) {
         <DropdownMenuItem
           onClick={() => copyToClipboard(link.short_url || link.short_code)}
         >
-          <Copy />
+          <Copy data-slot="icon" />
           Copy short URL
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => window.open(link.dest_url, "_blank")}>
-          <ExternalLink />
+          <ExternalLink data-slot="icon" />
           Open destination
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <QrCode />
+          <QrCode data-slot="icon" />
           QR Code
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
-          <Pencil />
+          <Pencil data-slot="icon" />
           Edit
         </DropdownMenuItem>
         <DropdownMenuItem>
-          <Power />
+          <Power data-slot="icon" />
           {link.is_active ? "Disable" : "Enable"}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -78,7 +78,7 @@ export function LinkActions({ link }: { link: Link }) {
               className="text-destructive focus:text-destructive"
               onSelect={(e) => e.preventDefault()}
             >
-              <Trash2 />
+              <Trash2 data-slot="icon" />
               Delete
             </DropdownMenuItem>
           }

@@ -85,7 +85,7 @@ export function LinkCard({ link }: { link: Link }) {
         size="sm"
         className="shrink-0 gap-1 tabular-nums"
       >
-        <MousePointerClick />
+        <MousePointerClick data-slot="icon" />
         {nFormatter(link.click_count)} clicks
       </Button>
 

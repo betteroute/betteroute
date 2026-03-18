@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { api } from "@/lib/api";
-import { PAGINATION, QUERY_CACHE } from "@/lib/constants";
+import { PAGINATION } from "@/lib/constants";
 import type { PaginatedResponse } from "@/types/common";
-import type { CreateInput } from "./schemas";
+import type { CreateInput, UpdateInput } from "./schemas";
 import type { Link } from "./types";
 
 export interface LinkFilters {
@@ -42,12 +42,17 @@ export const linkQueries = {
     queryOptions({
       queryKey: linkKeys.detail(slug, id),
       queryFn: () => api.get(`workspaces/${slug}/links/${id}`).json<Link>(),
-      staleTime: QUERY_CACHE.DETAIL_STALE_TIME,
     }),
 };
 
 export async function createLink(slug: string, input: CreateInput) {
   return api.post(`workspaces/${slug}/links`, { json: input }).json<Link>();
+}
+
+export async function updateLink(slug: string, id: string, input: UpdateInput) {
+  return api
+    .patch(`workspaces/${slug}/links/${id}`, { json: input })
+    .json<Link>();
 }
 
 export async function deleteLink(slug: string, id: string) {

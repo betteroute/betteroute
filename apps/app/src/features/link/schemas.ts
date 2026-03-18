@@ -14,3 +14,4 @@ export const createSchema = z.object({
 });
 
 export type CreateInput = z.infer<typeof createSchema>;
+export type UpdateInput = Partial<CreateInput> & { is_active?: boolean };

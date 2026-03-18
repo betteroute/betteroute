@@ -8,7 +8,7 @@ export function LinksEmptyState() {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16">
       <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Link2 className="size-6 text-muted-foreground" />
+        <Link2 data-slot="icon" className="size-6 text-muted-foreground" />
       </div>
       <div className="text-center">
         <h3 className="text-sm font-medium">No links yet</h3>
@@ -26,7 +26,7 @@ export function LinksFilteredEmptyState({ onClear }: { onClear: () => void }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16">
       <div className="flex size-12 items-center justify-center rounded-full bg-muted">
-        <Link2 className="size-6 text-muted-foreground" />
+        <Link2 data-slot="icon" className="size-6 text-muted-foreground" />
       </div>
       <div className="text-center">
         <h3 className="text-sm font-medium">No links match your filters</h3>

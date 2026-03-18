@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
@@ -35,6 +35,17 @@ export const Route = createFileRoute("/_workspace/$slug/links")({
   search: {
     middlewares: [stripSearchParams({ page: 1 })],
   },
+  loaderDeps: ({ search }) => ({
+    page: search.page,
+    search: search.search,
+    status: search.status,
+  }),
+  loader: async ({ context, params, deps }) => {
+    await context.queryClient.ensureQueryData(
+      linkQueries.list(params.slug, deps),
+    );
+  },
+  pendingComponent: PageLoader,
   component: LinksPage,
 });
 
@@ -45,7 +56,7 @@ function LinksPage() {
 
   const hasFilters = !!(searchParams.search || searchParams.status?.length);
 
-  const query = useQuery(
+  const query = useSuspenseQuery(
     linkQueries.list(workspace.slug, {
       page: searchParams.page,
       search: searchParams.search,
@@ -53,9 +64,9 @@ function LinksPage() {
     }),
   );
 
-  const links = query.data?.data ?? [];
-  const pagination = query.data?.pagination;
-  const isEmpty = !query.isLoading && links.length === 0;
+  const links = query.data.data;
+  const pagination = query.data.pagination;
+  const isEmpty = links.length === 0;
 
   function clearAll() {
     navigate({
@@ -105,9 +116,7 @@ function LinksPage() {
 
         {/* Link cards or empty state */}
 
-        {query.isLoading ? (
-          <PageLoader />
-        ) : isEmpty ? (
+        {isEmpty ? (
           <div className="rounded-lg border">
             {hasFilters ? (
               <LinksFilteredEmptyState onClear={clearAll} />
@@ -147,7 +156,7 @@ function LinksPage() {
                 }
                 disabled={searchParams.page <= 1}
               >
-                <ChevronLeft />
+                <ChevronLeft data-slot="icon" />
                 Previous
               </Button>
 
@@ -162,7 +171,7 @@ function LinksPage() {
                 disabled={searchParams.page >= pagination.total_pages}
               >
                 Next
-                <ChevronRight />
+                <ChevronRight data-slot="icon" />
               </Button>
             </div>
           </div>

@@ -17,8 +17,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useWorkspace } from "@/features/workspace/hooks";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 
 import { createLink, linkKeys } from "../queries";
 import { type CreateInput, createSchema } from "../schemas";
@@ -68,7 +67,7 @@ export function CreateLinkDialog() {
     >
       <DialogTrigger asChild>
         <Button>
-          <Plus />
+          <Plus data-slot="icon" />
           Create link
         </Button>
       </DialogTrigger>
@@ -86,7 +85,12 @@ export function CreateLinkDialog() {
           }}
           className="space-y-4"
         >
-          <form.Field name="dest_url">
+          <form.Field
+            name="dest_url"
+            validators={{
+              onChange: createSchema.shape.dest_url,
+            }}
+          >
             {(field) => (
               <Field>
                 <FieldLabel htmlFor={field.name}>Destination URL</FieldLabel>
@@ -104,7 +108,7 @@ export function CreateLinkDialog() {
                   }
                 />
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.dest_url,
                   )}
@@ -135,7 +139,7 @@ export function CreateLinkDialog() {
                   }
                 />
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.short_code,
                   )}
@@ -168,7 +172,7 @@ export function CreateLinkDialog() {
                   }
                 />
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.title,
                   )}

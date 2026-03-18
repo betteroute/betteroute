@@ -14,7 +14,7 @@ function AnalyticsPage() {
         title="Analytics"
         actions={
           <Button variant="outline" className="hidden sm:flex">
-            <Calendar className="mr-2 size-4" />
+            <Calendar data-slot="icon" className="mr-2 size-4" />
             Last 30 days
           </Button>
         }
