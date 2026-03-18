@@ -1,22 +1,19 @@
 package entitlement
 
-import (
-	"encoding/json"
-	"fmt"
-)
+import "log/slog"
 
 // minTier declares the minimum tier required to access each feature.
 var minTier = [featureCount]Tier{
 	// Free
-	FeatureAPI:             Free,
-	FeatureLinkExpiration:  Free,
-	FeatureDeviceTargeting: Free,
-	FeatureFolders:         Free,
-	FeatureTags:            Free,
-	FeatureCSVExport:       Free,
+	FeatureFolders:       Free,
+	FeatureTags:          Free,
+	FeatureCustomDomains: Free,
+	FeatureAPI:           Free,
 
 	// Pro
-	FeatureCustomDomains:      Pro,
+	FeatureCSVExport:          Pro,
+	FeatureDeviceTargeting:    Pro,
+	FeatureLinkExpiration:     Pro,
 	FeaturePasswordProtection: Pro,
 	FeatureClickExpiration:    Pro,
 	FeatureOneTimeLinks:       Pro,
@@ -31,21 +28,21 @@ var minTier = [featureCount]Tier{
 	FeatureWebhooks:           Pro,
 	FeatureLinkScheduling:     Pro,
 
-	// Business
-	FeatureFolderAccessControl: Business,
-	FeatureGeoTargeting:        Business,
-	FeatureBrowserTargeting:    Business,
-	FeatureOSTargeting:         Business,
-	FeatureLanguageTargeting:   Business,
-	FeatureTimeRouting:         Business,
-	FeatureDateRangeRouting:    Business,
-	FeatureReferrerRestriction: Business,
-	FeatureCountryBlocklist:    Business,
-	FeatureEmailGate:           Business,
-	FeatureABTesting:           Business,
-	FeatureCustomOGMeta:        Business,
-	FeatureDeepLinking:         Business,
-	FeatureRealtimeAnalytics:   Business,
+	// Team
+	FeatureFolderAccessControl: Team,
+	FeatureGeoTargeting:        Team,
+	FeatureBrowserTargeting:    Team,
+	FeatureOSTargeting:         Team,
+	FeatureLanguageTargeting:   Team,
+	FeatureTimeRouting:         Team,
+	FeatureDateRangeRouting:    Team,
+	FeatureReferrerRestriction: Team,
+	FeatureCountryBlocklist:    Team,
+	FeatureEmailGate:           Team,
+	FeatureABTesting:           Team,
+	FeatureCustomOGMeta:        Team,
+	FeatureDeepLinking:         Team,
+	FeatureRealtimeAnalytics:   Team,
 
 	// Enterprise
 	FeatureSSO:        Enterprise,
@@ -114,25 +111,20 @@ var quotaNames = [quotaCount]string{
 	QuotaAnalyticsRetention: "quota_analytics_retention",
 }
 
-var (
-	featureByName = buildIndex[Feature](featureNames[:])
-	quotaByName   = buildIndex[Quota](quotaNames[:])
-)
-
 // catalog holds immutable plan definitions.
 var catalog = map[string]Plan{
 	"free": {
 		Name: "Free", Tier: Free,
 		Caps: Caps{
-			QuotaLinks:              50,
+			QuotaLinks:              25,
 			QuotaClicks:             1_000,
-			QuotaDomains:            0,
+			QuotaDomains:            3,
 			QuotaWebhooks:           0,
 			QuotaAPIKeys:            1,
-			QuotaMembers:            1,
-			QuotaWorkspaces:         1,
-			QuotaFolders:            20,
-			QuotaTags:               unlimited,
+			QuotaMembers:            3,
+			QuotaWorkspaces:         3,
+			QuotaFolders:            10,
+			QuotaTags:               25,
 			QuotaAPIRateLimit:       60,
 			QuotaAnalyticsRetention: 30,
 		},
@@ -140,29 +132,29 @@ var catalog = map[string]Plan{
 	"pro": {
 		Name: "Pro", Tier: Pro,
 		Caps: Caps{
-			QuotaLinks:              5_000,
-			QuotaClicks:             100_000,
+			QuotaLinks:              1_000,
+			QuotaClicks:             50_000,
 			QuotaDomains:            10,
-			QuotaWebhooks:           3,
+			QuotaWebhooks:           5,
 			QuotaAPIKeys:            10,
-			QuotaMembers:            5,
-			QuotaWorkspaces:         3,
-			QuotaFolders:            200,
+			QuotaMembers:            10,
+			QuotaWorkspaces:         10,
+			QuotaFolders:            100,
 			QuotaTags:               unlimited,
 			QuotaAPIRateLimit:       600,
 			QuotaAnalyticsRetention: 365,
 		},
 	},
-	"business": {
-		Name: "Business", Tier: Business,
+	"team": {
+		Name: "Team", Tier: Team,
 		Caps: Caps{
-			QuotaLinks:              50_000,
-			QuotaClicks:             1_000_000,
-			QuotaDomains:            100,
-			QuotaWebhooks:           20,
-			QuotaAPIKeys:            50,
+			QuotaLinks:              10_000,
+			QuotaClicks:             250_000,
+			QuotaDomains:            50,
+			QuotaWebhooks:           50,
+			QuotaAPIKeys:            100,
 			QuotaMembers:            25,
-			QuotaWorkspaces:         10,
+			QuotaWorkspaces:         50,
 			QuotaFolders:            unlimited,
 			QuotaTags:               unlimited,
 			QuotaAPIRateLimit:       3_000,
@@ -185,6 +177,30 @@ var catalog = map[string]Plan{
 			QuotaAnalyticsRetention: unlimited,
 		},
 	},
+	"selfhosted": {
+		Name: "Self-Hosted", Tier: Enterprise,
+		Caps: Caps{
+			QuotaLinks:              unlimited,
+			QuotaClicks:             unlimited,
+			QuotaDomains:            unlimited,
+			QuotaWebhooks:           unlimited,
+			QuotaAPIKeys:            unlimited,
+			QuotaMembers:            unlimited,
+			QuotaWorkspaces:         unlimited,
+			QuotaFolders:            unlimited,
+			QuotaTags:               unlimited,
+			QuotaAPIRateLimit:       unlimited,
+			QuotaAnalyticsRetention: unlimited,
+		},
+	},
+}
+
+// PlanName returns the display name for a plan ID, or "" if unknown.
+func PlanName(id string) string {
+	if p, ok := catalog[id]; ok {
+		return p.Name
+	}
+	return ""
 }
 
 // lookup returns the Plan for the given ID, falling back to Free.
@@ -192,50 +208,6 @@ func lookup(id string) Plan {
 	if p, ok := catalog[id]; ok {
 		return p
 	}
+	slog.Warn("entitlement plan not found, falling back to free", "plan_id", id)
 	return catalog["free"]
-}
-
-// buildIndex builds a name→enum reverse lookup and panics on missing entries.
-func buildIndex[T ~int](names []string) map[string]T {
-	idx := make(map[string]T, len(names))
-	for i, name := range names {
-		if name == "" {
-			panic("entitlement: unnamed " + fmt.Sprintf("%T(%d)", T(0), i))
-		}
-		idx[name] = T(i)
-	}
-	return idx
-}
-
-// parseCustomCaps unmarshals {"quota_links": 100, ...} into a Caps array
-// and a set of flags indicating which quotas were explicitly overridden.
-func parseCustomCaps(raw []byte) (*Caps, [quotaCount]bool) {
-	var m map[string]int
-	if err := json.Unmarshal(raw, &m); err != nil || len(m) == 0 {
-		return nil, [quotaCount]bool{}
-	}
-	var caps Caps
-	var set [quotaCount]bool
-	for k, v := range m {
-		if q, ok := quotaByName[k]; ok {
-			caps[q] = v
-			set[q] = true
-		}
-	}
-	return &caps, set
-}
-
-// parseCustomFeatures unmarshals {"deep_linking": true, ...} into a feature set.
-func parseCustomFeatures(raw []byte) map[Feature]bool {
-	var m map[string]bool
-	if err := json.Unmarshal(raw, &m); err != nil || len(m) == 0 {
-		return nil
-	}
-	out := make(map[Feature]bool, len(m))
-	for k, v := range m {
-		if f, ok := featureByName[k]; ok && v {
-			out[f] = true
-		}
-	}
-	return out
 }

@@ -13,7 +13,7 @@ type Tier int
 const (
 	Free Tier = iota
 	Pro
-	Business
+	Team
 	Enterprise
 )
 
@@ -44,7 +44,7 @@ const (
 	FeatureWebhooks
 	FeatureLinkScheduling
 
-	// Business
+	// Team
 	FeatureFolderAccessControl
 	FeatureGeoTargeting
 	FeatureBrowserTargeting
@@ -122,37 +122,14 @@ type Plan struct {
 	Caps Caps
 }
 
-// Overrides holds per-workspace customizations for enterprise deals.
-type Overrides struct {
-	Caps     *Caps            // nil = use plan defaults
-	CapsSet  [quotaCount]bool // which quotas were explicitly set
-	Features map[Feature]bool // extra features beyond the plan tier
-}
-
-// ParseOverrides unmarshals the JSONB columns from the subscription row.
-func ParseOverrides(customLimits, customFeatures []byte) Overrides {
-	var o Overrides
-	if len(customLimits) > 0 {
-		o.Caps, o.CapsSet = parseCustomCaps(customLimits)
-	}
-	if len(customFeatures) > 0 {
-		o.Features = parseCustomFeatures(customFeatures)
-	}
-	return o
-}
-
 // Context is the resolved capability matrix for the current workspace request.
 type Context struct {
-	Plan           Plan
-	usage          Usage
-	customFeatures map[Feature]bool // enterprise overrides
+	Plan  Plan
+	usage Usage
 }
 
-// CanAccess returns true if the workspace plan (or override) permits the feature.
+// CanAccess returns true if the workspace plan permits the feature.
 func (c Context) CanAccess(f Feature) bool {
-	if c.customFeatures != nil && c.customFeatures[f] {
-		return true
-	}
 	return c.Plan.Tier >= minTier[f]
 }
 
@@ -178,23 +155,12 @@ func (c Context) Used(q Quota) int64 { return c.usage[q] }
 
 // Resolve builds the entitlement Context for a workspace.
 // Unknown plan IDs fall back to Free.
-func Resolve(planID string, overrides Overrides, usage Usage) Context {
+func Resolve(planID string, usage Usage) Context {
 	p := lookup(planID)
 
-	if overrides.Caps != nil {
-		merged := p.Caps
-		for q := range quotaCount {
-			if overrides.CapsSet[q] {
-				merged[q] = overrides.Caps[q]
-			}
-		}
-		p.Caps = merged
-	}
-
 	return Context{
-		Plan:           p,
-		usage:          usage,
-		customFeatures: overrides.Features,
+		Plan:  p,
+		usage: usage,
 	}
 }
 
