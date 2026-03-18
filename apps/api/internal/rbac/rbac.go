@@ -39,9 +39,10 @@ func (r Role) Has(minRole Role) bool {
 	return r.rank() >= minRole.rank()
 }
 
-// Context holds the workspace ID and role for the current request.
+// Context holds the workspace ID, status, and role for the current request.
 type Context struct {
 	WorkspaceID string
+	Status      string
 	Role        Role
 }
 

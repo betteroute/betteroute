@@ -24,6 +24,7 @@ type Workspace struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Slug      string    `json:"slug"`
+	Status    string    `json:"status"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
@@ -51,6 +52,7 @@ type Invitation struct {
 	WorkspaceID string    `json:"workspace_id"`
 	Email       string    `json:"email"`
 	Role        rbac.Role `json:"role"`
+	InvitedBy   *string   `json:"invited_by,omitempty"`
 	ExpiresAt   time.Time `json:"expires_at"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -100,6 +102,7 @@ var (
 	ErrTokenInvalid      = errors.New("invitation token is invalid or expired")
 	ErrInviteMismatch    = errors.New("invitation is for a different email address")
 	ErrAlreadyInvited    = errors.New("a pending invitation already exists for this email")
+	ErrLimitReached      = errors.New("workspace limit reached")
 )
 
 // ID generators.

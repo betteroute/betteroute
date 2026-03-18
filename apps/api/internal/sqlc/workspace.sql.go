@@ -64,7 +64,7 @@ func (q *Queries) DeleteWorkspaceMember(ctx context.Context, arg DeleteWorkspace
 }
 
 const findWorkspaceByID = `-- name: FindWorkspaceByID :one
-SELECT id, name, slug, deleted_at, created_at, updated_at FROM workspaces
+SELECT id, name, slug, status, deleted_at, created_at, updated_at FROM workspaces
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -75,6 +75,7 @@ func (q *Queries) FindWorkspaceByID(ctx context.Context, id string) (Workspace, 
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.Status,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -83,7 +84,7 @@ func (q *Queries) FindWorkspaceByID(ctx context.Context, id string) (Workspace, 
 }
 
 const findWorkspaceBySlug = `-- name: FindWorkspaceBySlug :one
-SELECT id, name, slug, deleted_at, created_at, updated_at FROM workspaces
+SELECT id, name, slug, status, deleted_at, created_at, updated_at FROM workspaces
 WHERE slug = $1 AND deleted_at IS NULL
 `
 
@@ -94,6 +95,7 @@ func (q *Queries) FindWorkspaceBySlug(ctx context.Context, slug string) (Workspa
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.Status,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -104,7 +106,7 @@ func (q *Queries) FindWorkspaceBySlug(ctx context.Context, slug string) (Workspa
 const findWorkspaceBySlugAndMember = `-- name: FindWorkspaceBySlugAndMember :one
 
 SELECT
-    w.id, w.name, w.slug, w.deleted_at, w.created_at, w.updated_at,
+    w.id, w.name, w.slug, w.status, w.deleted_at, w.created_at, w.updated_at,
     wm.role
 FROM workspaces w
 JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = $1
@@ -120,6 +122,7 @@ type FindWorkspaceBySlugAndMemberRow struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
 	Slug      string     `json:"slug"`
+	Status    string     `json:"status"`
 	DeletedAt *time.Time `json:"deleted_at"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -135,6 +138,7 @@ func (q *Queries) FindWorkspaceBySlugAndMember(ctx context.Context, arg FindWork
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.Status,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -192,24 +196,31 @@ func (q *Queries) FindWorkspaceMember(ctx context.Context, arg FindWorkspaceMemb
 }
 
 const insertWorkspace = `-- name: InsertWorkspace :one
-INSERT INTO workspaces (id, name, slug)
-VALUES ($1, $2, $3)
-RETURNING id, name, slug, deleted_at, created_at, updated_at
+INSERT INTO workspaces (id, name, slug, status)
+VALUES ($1, $2, $3, $4)
+RETURNING id, name, slug, status, deleted_at, created_at, updated_at
 `
 
 type InsertWorkspaceParams struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	Slug   string `json:"slug"`
+	Status string `json:"status"`
 }
 
 func (q *Queries) InsertWorkspace(ctx context.Context, arg InsertWorkspaceParams) (Workspace, error) {
-	row := q.db.QueryRow(ctx, insertWorkspace, arg.ID, arg.Name, arg.Slug)
+	row := q.db.QueryRow(ctx, insertWorkspace,
+		arg.ID,
+		arg.Name,
+		arg.Slug,
+		arg.Status,
+	)
 	var i Workspace
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Slug,
+		&i.Status,
 		&i.DeletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -280,6 +291,34 @@ func (q *Queries) InsertWorkspaceMember(ctx context.Context, arg InsertWorkspace
 		arg.InvitedBy,
 	)
 	return err
+}
+
+const listOwnedWorkspacePlans = `-- name: ListOwnedWorkspacePlans :many
+SELECT COALESCE(s.plan_id, 'free')::TEXT AS plan_id
+FROM workspace_members wm
+JOIN workspaces w ON w.id = wm.workspace_id
+LEFT JOIN subscriptions s ON s.workspace_id = wm.workspace_id
+WHERE wm.user_id = $1 AND wm.role = 'owner' AND w.status = 'active' AND w.deleted_at IS NULL
+`
+
+func (q *Queries) ListOwnedWorkspacePlans(ctx context.Context, userID string) ([]string, error) {
+	rows, err := q.db.Query(ctx, listOwnedWorkspacePlans, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var plan_id string
+		if err := rows.Scan(&plan_id); err != nil {
+			return nil, err
+		}
+		items = append(items, plan_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listWorkspaceInvitations = `-- name: ListWorkspaceInvitations :many
@@ -378,7 +417,7 @@ func (q *Queries) ListWorkspaceMembers(ctx context.Context, workspaceID string) 
 }
 
 const listWorkspacesByUser = `-- name: ListWorkspacesByUser :many
-SELECT w.id, w.name, w.slug, w.deleted_at, w.created_at, w.updated_at, wm.role
+SELECT w.id, w.name, w.slug, w.status, w.deleted_at, w.created_at, w.updated_at, wm.role
 FROM workspaces w
 JOIN workspace_members wm ON wm.workspace_id = w.id
 WHERE wm.user_id = $1 AND w.deleted_at IS NULL
@@ -389,6 +428,7 @@ type ListWorkspacesByUserRow struct {
 	ID        string     `json:"id"`
 	Name      string     `json:"name"`
 	Slug      string     `json:"slug"`
+	Status    string     `json:"status"`
 	DeletedAt *time.Time `json:"deleted_at"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
@@ -408,6 +448,7 @@ func (q *Queries) ListWorkspacesByUser(ctx context.Context, userID string) ([]Li
 			&i.ID,
 			&i.Name,
 			&i.Slug,
+			&i.Status,
 			&i.DeletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -421,6 +462,29 @@ func (q *Queries) ListWorkspacesByUser(ctx context.Context, userID string) ([]Li
 		return nil, err
 	}
 	return items, nil
+}
+
+const lockWorkspace = `-- name: LockWorkspace :one
+SELECT 1 FROM workspaces WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) LockWorkspace(ctx context.Context, id string) (int32, error) {
+	row := q.db.QueryRow(ctx, lockWorkspace, id)
+	var column_1 int32
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
+const provisionWorkspace = `-- name: ProvisionWorkspace :exec
+UPDATE workspaces
+SET status = 'active', updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND deleted_at IS NULL
+`
+
+// Webhook + Provision path: flip a draft workspace to active.
+func (q *Queries) ProvisionWorkspace(ctx context.Context, id string) error {
+	_, err := q.db.Exec(ctx, provisionWorkspace, id)
+	return err
 }
 
 const softDeleteWorkspace = `-- name: SoftDeleteWorkspace :exec
@@ -449,4 +513,31 @@ type UpdateWorkspaceMemberRoleParams struct {
 func (q *Queries) UpdateWorkspaceMemberRole(ctx context.Context, arg UpdateWorkspaceMemberRoleParams) error {
 	_, err := q.db.Exec(ctx, updateWorkspaceMemberRole, arg.WorkspaceID, arg.UserID, arg.Role)
 	return err
+}
+
+const updateWorkspaceStatus = `-- name: UpdateWorkspaceStatus :one
+UPDATE workspaces
+SET status = $2, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, name, slug, status, deleted_at, created_at, updated_at
+`
+
+type UpdateWorkspaceStatusParams struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+func (q *Queries) UpdateWorkspaceStatus(ctx context.Context, arg UpdateWorkspaceStatusParams) (Workspace, error) {
+	row := q.db.QueryRow(ctx, updateWorkspaceStatus, arg.ID, arg.Status)
+	var i Workspace
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.Status,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

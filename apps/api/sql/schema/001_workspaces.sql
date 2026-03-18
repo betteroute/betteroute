@@ -6,6 +6,7 @@ CREATE TABLE workspaces (
     id          TEXT PRIMARY KEY,
     name        TEXT NOT NULL,
     slug        TEXT NOT NULL,
+    status      TEXT NOT NULL DEFAULT 'active',
 
     deleted_at  TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -18,7 +19,10 @@ CREATE TABLE workspaces (
         CHECK (char_length(slug) BETWEEN 1 AND 50),
 
     CONSTRAINT workspaces_slug_format
-        CHECK (slug ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$')
+        CHECK (slug ~ '^[a-z0-9]([a-z0-9-]*[a-z0-9])?$'),
+
+    CONSTRAINT workspaces_status_check
+        CHECK (status IN ('active', 'pending', 'suspended'))
 );
 
 -- Unique slug for active workspaces. Partial index allows reuse after delete.

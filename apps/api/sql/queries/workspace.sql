@@ -1,7 +1,19 @@
 -- name: InsertWorkspace :one
-INSERT INTO workspaces (id, name, slug)
-VALUES ($1, $2, $3)
+INSERT INTO workspaces (id, name, slug, status)
+VALUES ($1, $2, $3, $4)
 RETURNING *;
+
+-- name: UpdateWorkspaceStatus :one
+UPDATE workspaces
+SET status = $2, updated_at = NOW()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING *;
+
+-- name: ProvisionWorkspace :exec
+-- Webhook + Provision path: flip a draft workspace to active.
+UPDATE workspaces
+SET status = 'active', updated_at = NOW()
+WHERE id = $1 AND status = 'pending' AND deleted_at IS NULL;
 
 -- name: FindWorkspaceByID :one
 SELECT * FROM workspaces
@@ -29,7 +41,7 @@ WHERE id = $1 AND deleted_at IS NULL;
 -- Middleware hot path: resolve workspace and member role in one round-trip.
 -- name: FindWorkspaceBySlugAndMember :one
 SELECT
-    w.id, w.name, w.slug, w.deleted_at, w.created_at, w.updated_at,
+    w.id, w.name, w.slug, w.status, w.deleted_at, w.created_at, w.updated_at,
     wm.role
 FROM workspaces w
 JOIN workspace_members wm ON wm.workspace_id = w.id AND wm.user_id = sqlc.arg(user_id)
@@ -99,3 +111,10 @@ WHERE id = $1;
 -- name: DeleteWorkspaceInvitation :exec
 DELETE FROM workspace_invitations
 WHERE id = $1 AND workspace_id = $2;
+
+-- name: ListOwnedWorkspacePlans :many
+SELECT COALESCE(s.plan_id, 'free')::TEXT AS plan_id
+FROM workspace_members wm
+JOIN workspaces w ON w.id = wm.workspace_id
+LEFT JOIN subscriptions s ON s.workspace_id = wm.workspace_id
+WHERE wm.user_id = $1 AND wm.role = 'owner' AND w.status = 'active' AND w.deleted_at IS NULL;
