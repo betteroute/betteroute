@@ -7,31 +7,39 @@ import (
 	"strings"
 	"time"
 
+	"github.com/execrc/betteroute/internal/entitlement"
 	"github.com/execrc/betteroute/internal/notify"
 	"github.com/execrc/betteroute/internal/rbac"
 )
 
 const invitationTTL = 7 * 24 * time.Hour
 
+// BillingProvisioner seeds subscription and usage rows for new workspaces.
+type BillingProvisioner interface {
+	Provision(ctx context.Context, workspaceID string) error
+}
+
 // Service implements workspace business logic.
 type Service struct {
 	store    *Store
 	notifier notify.TeamNotifier
 	webURL   string
+	billing  BillingProvisioner
 }
 
 // NewService creates a new workspace service.
-func NewService(store *Store, notifier notify.TeamNotifier, webURL string) *Service {
-	return &Service{store: store, notifier: notifier, webURL: webURL}
+func NewService(store *Store, notifier notify.TeamNotifier, webURL string, billing BillingProvisioner) *Service {
+	return &Service{store: store, notifier: notifier, webURL: webURL, billing: billing}
 }
 
 // ResolveAccess looks up a workspace by slug and verifies the user is a member.
-// Used by the workspace middleware — optimised to one DB round-trip.
 func (s *Service) ResolveAccess(ctx context.Context, slug, userID string) (*Workspace, rbac.Role, error) {
 	return s.store.FindBySlugAndMember(ctx, slug, userID)
 }
 
-// Create creates a new workspace and adds the creator as owner.
+// Create creates a new workspace, adds the creator as owner, and seeds billing state.
+// The workspace is immediately active on the free plan. Upgrades happen via the
+// billing checkout flow — no separate provisioning step required.
 func (s *Service) Create(ctx context.Context, userID string, input CreateInput) (*Workspace, error) {
 	slug := strings.TrimSpace(input.Slug)
 	if slug == "" {
@@ -41,10 +49,16 @@ func (s *Service) Create(ctx context.Context, userID string, input CreateInput) 
 		return nil, ErrInvalidSlug
 	}
 
+	// Enforce workspace creation limits based on the user's highest plan.
+	if err := s.checkWorkspaceLimit(ctx, userID); err != nil {
+		return nil, err
+	}
+
 	ws, err := s.store.Insert(ctx, &Workspace{
-		ID:   newWorkspaceID(),
-		Name: strings.TrimSpace(input.Name),
-		Slug: slug,
+		ID:     newWorkspaceID(),
+		Name:   strings.TrimSpace(input.Name),
+		Slug:   slug,
+		Status: "active",
 	})
 	if err != nil {
 		return nil, err
@@ -54,7 +68,39 @@ func (s *Service) Create(ctx context.Context, userID string, input CreateInput) 
 		return nil, fmt.Errorf("adding owner: %w", err)
 	}
 
+	// Seed subscription + usage rows (free plan by default).
+	if s.billing != nil {
+		if err = s.billing.Provision(ctx, ws.ID); err != nil {
+			slog.WarnContext(ctx, "seeding billing state", "error", err, "workspace_id", ws.ID)
+		}
+	}
+
 	return ws, nil
+}
+
+// checkWorkspaceLimit verifies the user hasn't exceeded workspace creation limits.
+// The limit is derived from the user's highest plan across all owned workspaces.
+func (s *Service) checkWorkspaceLimit(ctx context.Context, userID string) error {
+	plans, err := s.store.ListOwnedWorkspacePlans(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	maxAllowed := entitlement.Resolve("free", entitlement.Usage{}).Plan.Caps[entitlement.QuotaWorkspaces]
+	for _, plan := range plans {
+		cap := entitlement.Resolve(plan, entitlement.Usage{}).Plan.Caps[entitlement.QuotaWorkspaces]
+		if cap == -1 {
+			return nil // unlimited
+		}
+		if cap > maxAllowed {
+			maxAllowed = cap
+		}
+	}
+
+	if maxAllowed != -1 && len(plans) >= maxAllowed {
+		return ErrLimitReached
+	}
+	return nil
 }
 
 // List returns all workspaces the user is a member of, with their role in each.
@@ -110,7 +156,6 @@ func (s *Service) UpdateMember(ctx context.Context, workspaceID, targetUserID st
 }
 
 // RemoveMember removes a user from a workspace. Cannot remove the last owner.
-// A member may remove themselves (leave the workspace).
 func (s *Service) RemoveMember(ctx context.Context, workspaceID, targetUserID string) error {
 	member, err := s.store.FindMember(ctx, workspaceID, targetUserID)
 	if err != nil {
@@ -176,7 +221,6 @@ func (s *Service) CancelInvitation(ctx context.Context, workspaceID, invitationI
 }
 
 // AcceptInvitation accepts a workspace invitation and adds the user as a member.
-// The invitation email must match the authenticated user's email.
 func (s *Service) AcceptInvitation(ctx context.Context, userID, userEmail string, input AcceptInvitationInput) (*WithRole, error) {
 	inv, err := s.store.FindInvitationByToken(ctx, input.Token)
 	if err != nil {
@@ -187,7 +231,7 @@ func (s *Service) AcceptInvitation(ctx context.Context, userID, userEmail string
 		return nil, ErrInviteMismatch
 	}
 
-	if err = s.store.InsertMember(ctx, inv.WorkspaceID, userID, inv.Role, nil); err != nil {
+	if err = s.store.InsertMember(ctx, inv.WorkspaceID, userID, inv.Role, inv.InvitedBy); err != nil {
 		return nil, err
 	}
 

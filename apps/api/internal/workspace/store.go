@@ -28,9 +28,10 @@ func NewStore(pool *pgxpool.Pool) *Store {
 // Insert creates a new workspace record.
 func (s *Store) Insert(ctx context.Context, ws *Workspace) (*Workspace, error) {
 	row, err := s.q.InsertWorkspace(ctx, sqlc.InsertWorkspaceParams{
-		ID:   ws.ID,
-		Name: ws.Name,
-		Slug: ws.Slug,
+		ID:     ws.ID,
+		Name:   ws.Name,
+		Slug:   ws.Slug,
+		Status: ws.Status,
 	})
 	if err != nil {
 		if db.IsUniqueViolation(err) {
@@ -66,6 +67,7 @@ func (s *Store) ListByUser(ctx context.Context, userID string) ([]WithRole, erro
 				ID:        row.ID,
 				Name:      row.Name,
 				Slug:      row.Slug,
+				Status:    row.Status,
 				CreatedAt: row.CreatedAt,
 				UpdatedAt: row.UpdatedAt,
 			},
@@ -73,6 +75,30 @@ func (s *Store) ListByUser(ctx context.Context, userID string) ([]WithRole, erro
 		}
 	}
 	return out, nil
+}
+
+// ListOwnedWorkspacePlans retrieves the subscription plan IDs for all active workspaces owned by the user.
+func (s *Store) ListOwnedWorkspacePlans(ctx context.Context, userID string) ([]string, error) {
+	plans, err := s.q.ListOwnedWorkspacePlans(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("listing owned plans for user %s: %w", userID, err)
+	}
+	return plans, nil
+}
+
+// UpdateStatus changes the status of a workspace and returns the updated record.
+func (s *Store) UpdateStatus(ctx context.Context, id, status string) (*Workspace, error) {
+	row, err := s.q.UpdateWorkspaceStatus(ctx, sqlc.UpdateWorkspaceStatusParams{
+		ID:     id,
+		Status: status,
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("updating workspace status: %w", err)
+	}
+	return toWorkspace(row), nil
 }
 
 // Update partially updates a workspace.
@@ -130,6 +156,7 @@ func (s *Store) FindBySlugAndMember(ctx context.Context, slug, userID string) (*
 		ID:        row.ID,
 		Name:      row.Name,
 		Slug:      row.Slug,
+		Status:    row.Status,
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
@@ -293,6 +320,7 @@ func toWorkspace(row sqlc.Workspace) *Workspace {
 		ID:        row.ID,
 		Name:      row.Name,
 		Slug:      row.Slug,
+		Status:    row.Status,
 		CreatedAt: row.CreatedAt,
 		UpdatedAt: row.UpdatedAt,
 	}
@@ -304,6 +332,7 @@ func toInvitation(row sqlc.WorkspaceInvitation) *Invitation {
 		WorkspaceID: row.WorkspaceID,
 		Email:       row.Email,
 		Role:        rbac.Role(row.Role),
+		InvitedBy:   row.InvitedBy,
 		ExpiresAt:   row.ExpiresAt,
 		CreatedAt:   row.CreatedAt,
 	}

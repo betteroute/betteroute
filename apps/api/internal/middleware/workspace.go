@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v3"
 
 	"github.com/execrc/betteroute/internal/apikey"
@@ -39,8 +41,16 @@ func Workspace(svc *workspace.Service) fiber.Handler {
 			}
 		}
 
+		// Suspended workspaces can only access billing routes to resolve payment issues.
+		if ws.Status == "suspended" {
+			if !strings.Contains(c.Path(), "/billing") {
+				return errs.Forbidden("workspace suspended")
+			}
+		}
+
 		c.SetContext(rbac.NewContext(ctx, rbac.Context{
 			WorkspaceID: ws.ID,
+			Status:      ws.Status,
 			Role:        role,
 		}))
 

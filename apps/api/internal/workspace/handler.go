@@ -395,6 +395,8 @@ func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
 		return errs.NotFound("workspace", "")
+	case errors.Is(err, ErrLimitReached):
+		return errs.PaymentRequired("Workspace limit reached. Please upgrade to create more.")
 	case errors.Is(err, ErrSlugTaken):
 		return errs.Conflict("slug already in use")
 	case errors.Is(err, ErrNotMember):
