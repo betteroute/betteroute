@@ -26,7 +26,6 @@ export const workspaceQueries = {
     queryOptions({
       queryKey: workspaceKeys.detail(slug),
       queryFn: () => api.get(`workspaces/${slug}`).json<WorkspaceWithRole>(),
-      staleTime: QUERY_CACHE.DETAIL_STALE_TIME,
     }),
 
   members: (slug: string) =>
@@ -89,3 +88,4 @@ export async function acceptInvitation(token: string) {
     .post("workspaces/accept-invitation", { json: { token } })
     .json<WorkspaceWithRole>();
 }
+

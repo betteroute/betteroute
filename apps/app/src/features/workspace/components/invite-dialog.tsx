@@ -26,8 +26,7 @@ import { useWorkspace } from "@/features/workspace/hooks";
 import { inviteMember, workspaceKeys } from "@/features/workspace/queries";
 import { inviteSchema } from "@/features/workspace/schemas";
 import { ASSIGNABLE_ROLES, ROLE_INFO } from "@/features/workspace/types";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 
 export function InviteDialog() {
   const { workspace } = useWorkspace();
@@ -38,7 +37,7 @@ export function InviteDialog() {
     mutationFn: (input: { email: string; role: string }) =>
       inviteMember(workspace.slug, input),
     onSuccess: () => {
-      queryClient.refetchQueries({
+      queryClient.invalidateQueries({
         queryKey: workspaceKeys.invitations(workspace.slug),
       });
       setOpen(false);
@@ -97,7 +96,7 @@ export function InviteDialog() {
                       type="button"
                     >
                       {ROLE_INFO[field.state.value]?.label ?? field.state.value}
-                      <ChevronsUpDown className="size-4 opacity-50" />
+                      <ChevronsUpDown data-slot="icon" className="opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
@@ -114,7 +113,7 @@ export function InviteDialog() {
                       >
                         {ROLE_INFO[role]?.label ?? role}
                         {role === field.state.value && (
-                          <Check className="size-4" />
+                          <Check data-slot="icon" />
                         )}
                       </DropdownMenuItem>
                     ))}
@@ -126,7 +125,7 @@ export function InviteDialog() {
                   </p>
                 )}
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.role,
                   )}
@@ -153,7 +152,7 @@ export function InviteDialog() {
                   }
                 />
                 <FieldError
-                  errors={resolveErrors(
+                  errors={resolveFieldErrors(
                     field.state.meta.errors,
                     serverErrors?.email,
                   )}

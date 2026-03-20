@@ -79,7 +79,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
                 <Link to="/$slug" params={{ slug: workspace.slug }}>
                   <Avatar className="size-7 rounded-lg after:rounded-lg">
                     <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-xs font-semibold">
-                      <ArrowLeft className="size-4" />
+                      <ArrowLeft data-slot="icon" className="size-4" />
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
@@ -119,7 +119,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenuItem key={item.label}>
                 <SidebarMenuButton asChild tooltip={item.label}>
                   <Link to={item.to} params={{ slug: workspace.slug }}>
-                    <item.icon />
+                    <item.icon data-slot="icon" />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>

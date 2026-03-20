@@ -8,8 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useWorkspace } from "@/features/workspace/hooks";
 import { updateWorkspace, workspaceKeys } from "@/features/workspace/queries";
 import { updateSchema } from "@/features/workspace/schemas";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 import { slugify } from "@/lib/url-utils";
 
 function WorkspaceNameForm() {
@@ -19,7 +18,7 @@ function WorkspaceNameForm() {
   const mutation = useMutation({
     mutationFn: (name: string) => updateWorkspace(workspace.slug, { name }),
     onSuccess: () => {
-      queryClient.refetchQueries({ queryKey: workspaceKeys.all });
+      queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
     },
   });
 
@@ -68,7 +67,7 @@ function WorkspaceNameForm() {
               />
 
               <FieldError
-                errors={resolveErrors(
+                errors={resolveFieldErrors(
                   field.state.meta.errors,
                   serverErrors?.name,
                 )}
@@ -93,7 +92,7 @@ function WorkspaceSlugForm() {
   const mutation = useMutation({
     mutationFn: (slug: string) => updateWorkspace(workspace.slug, { slug }),
     onSuccess: async (ws) => {
-      await queryClient.refetchQueries({ queryKey: workspaceKeys.all });
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
       navigate({ to: "/$slug/settings", params: { slug: ws.slug } });
     },
   });
@@ -150,7 +149,7 @@ function WorkspaceSlugForm() {
               </div>
 
               <FieldError
-                errors={resolveErrors(
+                errors={resolveFieldErrors(
                   field.state.meta.errors,
                   serverErrors?.slug,
                 )}

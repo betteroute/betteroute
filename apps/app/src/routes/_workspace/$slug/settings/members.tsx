@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useMemo } from "react";
 import { z } from "zod";
@@ -34,6 +34,17 @@ const membersSearchSchema = z.object({
 export const Route = createFileRoute("/_workspace/$slug/settings/members")({
   validateSearch: membersSearchSchema,
   staticData: { title: "Members" },
+  loader: async ({ context, params }) => {
+    await Promise.all([
+      context.queryClient.ensureQueryData(
+        workspaceQueries.members(params.slug),
+      ),
+      context.queryClient.ensureQueryData(
+        workspaceQueries.invitations(params.slug),
+      ),
+    ]);
+  },
+  pendingComponent: PageLoader,
   component: MembersSettingsPage,
 });
 
@@ -48,14 +59,15 @@ function MembersSettingsPage() {
     [selectedRoles],
   );
 
-  const membersQuery = useQuery(workspaceQueries.members(workspace.slug));
+  const membersQuery = useSuspenseQuery(
+    workspaceQueries.members(workspace.slug),
+  );
 
-  const invitationsQuery = useQuery(
+  const invitationsQuery = useSuspenseQuery(
     workspaceQueries.invitations(workspace.slug),
   );
 
   const filteredMembers = useMemo(() => {
-    if (!membersQuery.data) return [];
     return membersQuery.data.filter(
       (m) =>
         (!search ||
@@ -66,7 +78,6 @@ function MembersSettingsPage() {
   }, [membersQuery.data, search, searchLower, matchesRole]);
 
   const filteredInvitations = useMemo(() => {
-    if (!invitationsQuery.data) return [];
     return invitationsQuery.data.filter(
       (inv) =>
         (!search || inv.email.toLowerCase().includes(searchLower)) &&
@@ -116,9 +127,7 @@ function MembersSettingsPage() {
       </div>
 
       <section>
-        {membersQuery.isLoading ? (
-          <PageLoader />
-        ) : filteredMembers.length ? (
+        {filteredMembers.length ? (
           <div className="space-y-4">
             <div className="rounded-md border">
               <Table>

@@ -7,15 +7,16 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { createWorkspace, workspaceKeys } from "@/features/workspace/queries";
 import { createSchema } from "@/features/workspace/schemas";
-import { getFieldErrors } from "@/lib/errors";
-import { resolveErrors } from "@/lib/form-errors";
+import { getFieldErrors, resolveFieldErrors } from "@/lib/errors";
 import { slugify } from "@/lib/url-utils";
 
 export function CreateWorkspaceForm({
   onSuccess,
+  onAfterCreate,
   autoFocus = true,
 }: {
   onSuccess?: () => void;
+  onAfterCreate?: (slug: string) => void;
   autoFocus?: boolean;
 }) {
   const navigate = useNavigate();
@@ -26,7 +27,11 @@ export function CreateWorkspaceForm({
     onSuccess: async (ws) => {
       onSuccess?.();
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.list() });
-      navigate({ to: "/$slug", params: { slug: ws.slug } });
+      if (onAfterCreate) {
+        onAfterCreate(ws.slug);
+      } else {
+        navigate({ to: "/$slug", params: { slug: ws.slug } });
+      }
     },
   });
 
@@ -77,7 +82,7 @@ export function CreateWorkspaceForm({
               }
             />
             <FieldError
-              errors={resolveErrors(
+              errors={resolveFieldErrors(
                 field.state.meta.errors,
                 serverErrors?.name,
               )}
@@ -116,7 +121,7 @@ export function CreateWorkspaceForm({
               </p>
             )}
             <FieldError
-              errors={resolveErrors(
+              errors={resolveFieldErrors(
                 field.state.meta.errors,
                 serverErrors?.slug,
               )}

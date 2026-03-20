@@ -1,14 +1,22 @@
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 
-const workspaceApi = getRouteApi("/_workspace");
+import { authQueries } from "@/features/auth/queries";
+import { workspaceQueries } from "@/features/workspace/queries";
+
 const workspaceSlugApi = getRouteApi("/_workspace/$slug");
 
-/** Session context: { user, workspaces } from the _workspace layout guard. */
+/** Session context: { user, workspaces } */
 export function useSession() {
-  return workspaceApi.useRouteContext();
+  const { data: user } = useSuspenseQuery(authQueries.session());
+  const { data: workspaces } = useSuspenseQuery(workspaceQueries.list());
+  return { user, workspaces };
 }
 
-/** Resolved workspace: { workspace } + inherited session context. */
+/** Workspace: { workspace, user, workspaces } */
 export function useWorkspace() {
-  return workspaceSlugApi.useRouteContext();
+  const session = useSession();
+  const { workspace } = workspaceSlugApi.useRouteContext();
+
+  return { ...session, workspace };
 }

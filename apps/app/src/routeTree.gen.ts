@@ -20,7 +20,6 @@ import { Route as AuthLoginRouteImport } from './routes/_auth/login'
 import { Route as WorkspaceSlugIndexRouteImport } from './routes/_workspace/$slug/index'
 import { Route as WorkspaceSlugTagsRouteImport } from './routes/_workspace/$slug/tags'
 import { Route as WorkspaceSlugSettingsRouteImport } from './routes/_workspace/$slug/settings'
-import { Route as WorkspaceSlugProvisionRouteImport } from './routes/_workspace/$slug/provision'
 import { Route as WorkspaceSlugLinksRouteImport } from './routes/_workspace/$slug/links'
 import { Route as WorkspaceSlugFoldersRouteImport } from './routes/_workspace/$slug/folders'
 import { Route as WorkspaceSlugDomainsRouteImport } from './routes/_workspace/$slug/domains'
@@ -84,11 +83,6 @@ const WorkspaceSlugTagsRoute = WorkspaceSlugTagsRouteImport.update({
 const WorkspaceSlugSettingsRoute = WorkspaceSlugSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
-  getParentRoute: () => WorkspaceSlugRoute,
-} as any)
-const WorkspaceSlugProvisionRoute = WorkspaceSlugProvisionRouteImport.update({
-  id: '/provision',
-  path: '/provision',
   getParentRoute: () => WorkspaceSlugRoute,
 } as any)
 const WorkspaceSlugLinksRoute = WorkspaceSlugLinksRouteImport.update({
@@ -165,7 +159,6 @@ export interface FileRoutesByFullPath {
   '/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/$slug/links': typeof WorkspaceSlugLinksRoute
-  '/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
   '/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/$slug/': typeof WorkspaceSlugIndexRoute
@@ -187,7 +180,6 @@ export interface FileRoutesByTo {
   '/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/$slug/links': typeof WorkspaceSlugLinksRoute
-  '/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/$slug': typeof WorkspaceSlugIndexRoute
   '/$slug/settings/api-keys': typeof WorkspaceSlugSettingsApiKeysRoute
@@ -212,7 +204,6 @@ export interface FileRoutesById {
   '/_workspace/$slug/domains': typeof WorkspaceSlugDomainsRoute
   '/_workspace/$slug/folders': typeof WorkspaceSlugFoldersRoute
   '/_workspace/$slug/links': typeof WorkspaceSlugLinksRoute
-  '/_workspace/$slug/provision': typeof WorkspaceSlugProvisionRoute
   '/_workspace/$slug/settings': typeof WorkspaceSlugSettingsRouteWithChildren
   '/_workspace/$slug/tags': typeof WorkspaceSlugTagsRoute
   '/_workspace/$slug/': typeof WorkspaceSlugIndexRoute
@@ -237,7 +228,6 @@ export interface FileRouteTypes {
     | '/$slug/domains'
     | '/$slug/folders'
     | '/$slug/links'
-    | '/$slug/provision'
     | '/$slug/settings'
     | '/$slug/tags'
     | '/$slug/'
@@ -259,7 +249,6 @@ export interface FileRouteTypes {
     | '/$slug/domains'
     | '/$slug/folders'
     | '/$slug/links'
-    | '/$slug/provision'
     | '/$slug/tags'
     | '/$slug'
     | '/$slug/settings/api-keys'
@@ -283,7 +272,6 @@ export interface FileRouteTypes {
     | '/_workspace/$slug/domains'
     | '/_workspace/$slug/folders'
     | '/_workspace/$slug/links'
-    | '/_workspace/$slug/provision'
     | '/_workspace/$slug/settings'
     | '/_workspace/$slug/tags'
     | '/_workspace/$slug/'
@@ -379,13 +367,6 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/$slug/settings'
       preLoaderRoute: typeof WorkspaceSlugSettingsRouteImport
-      parentRoute: typeof WorkspaceSlugRoute
-    }
-    '/_workspace/$slug/provision': {
-      id: '/_workspace/$slug/provision'
-      path: '/provision'
-      fullPath: '/$slug/provision'
-      preLoaderRoute: typeof WorkspaceSlugProvisionRouteImport
       parentRoute: typeof WorkspaceSlugRoute
     }
     '/_workspace/$slug/links': {
@@ -511,7 +492,6 @@ interface WorkspaceSlugRouteChildren {
   WorkspaceSlugDomainsRoute: typeof WorkspaceSlugDomainsRoute
   WorkspaceSlugFoldersRoute: typeof WorkspaceSlugFoldersRoute
   WorkspaceSlugLinksRoute: typeof WorkspaceSlugLinksRoute
-  WorkspaceSlugProvisionRoute: typeof WorkspaceSlugProvisionRoute
   WorkspaceSlugSettingsRoute: typeof WorkspaceSlugSettingsRouteWithChildren
   WorkspaceSlugTagsRoute: typeof WorkspaceSlugTagsRoute
   WorkspaceSlugIndexRoute: typeof WorkspaceSlugIndexRoute
@@ -522,7 +502,6 @@ const WorkspaceSlugRouteChildren: WorkspaceSlugRouteChildren = {
   WorkspaceSlugDomainsRoute: WorkspaceSlugDomainsRoute,
   WorkspaceSlugFoldersRoute: WorkspaceSlugFoldersRoute,
   WorkspaceSlugLinksRoute: WorkspaceSlugLinksRoute,
-  WorkspaceSlugProvisionRoute: WorkspaceSlugProvisionRoute,
   WorkspaceSlugSettingsRoute: WorkspaceSlugSettingsRouteWithChildren,
   WorkspaceSlugTagsRoute: WorkspaceSlugTagsRoute,
   WorkspaceSlugIndexRoute: WorkspaceSlugIndexRoute,
@@ -556,12 +535,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

@@ -53,7 +53,7 @@ export function NavGroup({
                   tooltip={item.label}
                 >
                   <Link to={item.to} params={{ slug }}>
-                    <item.icon />
+                    <item.icon data-slot="icon" />
                     <span>{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -71,9 +71,12 @@ export function NavGroup({
               <SidebarMenuItem>
                 <CollapsibleTrigger asChild>
                   <SidebarMenuButton isActive={isActive} tooltip={item.label}>
-                    <item.icon />
+                    <item.icon data-slot="icon" />
                     <span>{item.label}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                    <ChevronRight
+                      data-slot="icon"
+                      className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90"
+                    />
                   </SidebarMenuButton>
                 </CollapsibleTrigger>
                 <CollapsibleContent>

@@ -54,11 +54,11 @@ export function WorkspaceSwitcher({
                 </Avatar>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">{current.name}</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    Free
+                  <span className="truncate text-xs text-muted-foreground capitalize">
+                    {current.plan_id}
                   </span>
                 </div>
-                <ChevronsUpDown className="ml-auto" />
+                <ChevronsUpDown data-slot="icon" className="ml-auto" />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent
@@ -93,7 +93,7 @@ export function WorkspaceSwitcher({
                 onClick={() => setCreateOpen(true)}
               >
                 <div className="flex size-6 items-center justify-center rounded-lg border bg-background">
-                  <Plus className="size-3.5" />
+                  <Plus data-slot="icon" className="size-3.5" />
                 </div>
                 Create workspace
               </DropdownMenuItem>

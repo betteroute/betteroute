@@ -28,7 +28,7 @@ export function DeleteWorkspaceDialog() {
   const mutation = useMutation({
     mutationFn: () => deleteWorkspace(workspace.slug),
     onSuccess: async () => {
-      await queryClient.refetchQueries({ queryKey: workspaceKeys.all });
+      await queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
       navigate({ to: "/" });
     },
   });

@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Mail, MoreVertical, RotateCcw, X } from "lucide-react";
 
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ export function InvitationRow({ invitation }: { invitation: Invitation }) {
   const cancelMutation = useMutation({
     mutationFn: () => cancelInvitation(workspace.slug, invitation.id),
     onSuccess: () => {
-      queryClient.refetchQueries({
+      queryClient.invalidateQueries({
         queryKey: workspaceKeys.invitations(workspace.slug),
       });
     },
@@ -36,7 +37,9 @@ export function InvitationRow({ invitation }: { invitation: Invitation }) {
         <div className="flex items-center gap-3">
           <UserAvatar
             name={invitation.email}
-            fallbackIcon={<Mail className="size-3.5 opacity-70" />}
+            fallbackIcon={
+              <Mail data-slot="icon" className="size-3.5 opacity-70" />
+            }
           />
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-2">
@@ -70,22 +73,31 @@ export function InvitationRow({ invitation }: { invitation: Invitation }) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon-sm">
-              <MoreVertical />
+              <MoreVertical data-slot="icon" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-48">
             <DropdownMenuItem>
-              <RotateCcw className="size-4" />
+              <RotateCcw data-slot="icon" />
               Resend invitation
             </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => cancelMutation.mutate()}
-              disabled={cancelMutation.isPending}
-              className="text-destructive focus:text-destructive"
-            >
-              <X className="size-4" />
-              Cancel invitation
-            </DropdownMenuItem>
+            <ConfirmDialog
+              trigger={
+                <DropdownMenuItem
+                  onSelect={(e) => e.preventDefault()}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <X data-slot="icon" />
+                  Cancel invitation
+                </DropdownMenuItem>
+              }
+              title="Cancel invitation"
+              description={`Revoke the invitation for ${invitation.email}? They will no longer be able to use the link.`}
+              confirmLabel="Cancel invitation"
+              pendingLabel="Cancelling…"
+              onConfirm={() => cancelMutation.mutateAsync()}
+              pending={cancelMutation.isPending}
+            />
           </DropdownMenuContent>
         </DropdownMenu>
       </TableCell>

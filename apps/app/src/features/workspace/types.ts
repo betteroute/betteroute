@@ -42,6 +42,8 @@ export interface Workspace {
   id: string;
   name: string;
   slug: string;
+  status: string;
+  plan_id: string;
   created_at: string;
   updated_at: string;
 }

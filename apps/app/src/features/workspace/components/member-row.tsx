@@ -41,7 +41,7 @@ export function MemberRow({ member }: { member: Member }) {
     mutationFn: (role: string) =>
       updateMemberRole(workspace.slug, member.user_id, role),
     onSuccess: () => {
-      queryClient.refetchQueries({
+      queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(workspace.slug),
       });
     },
@@ -50,7 +50,7 @@ export function MemberRow({ member }: { member: Member }) {
   const removeMutation = useMutation({
     mutationFn: () => removeMember(workspace.slug, member.user_id),
     onSuccess: () => {
-      queryClient.refetchQueries({
+      queryClient.invalidateQueries({
         queryKey: workspaceKeys.members(workspace.slug),
       });
     },
@@ -80,7 +80,10 @@ export function MemberRow({ member }: { member: Member }) {
           <DropdownMenu>
             <DropdownMenuTrigger className="group/role flex items-center gap-1.5 rounded-md px-1.5 py-1 -ml-1.5 text-sm capitalize text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground data-[state=open]:bg-muted data-[state=open]:text-foreground">
               <span>{ROLE_INFO[member.role]?.label ?? member.role}</span>
-              <SquarePen className="size-3.5 text-muted-foreground/50 transition-colors group-hover/role:text-foreground" />
+              <SquarePen
+                data-slot="icon"
+                className="size-3.5 text-muted-foreground/50 transition-colors group-hover/role:text-foreground"
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[140px]">
               {ASSIGNABLE_ROLES.map((role) => (
@@ -90,7 +93,7 @@ export function MemberRow({ member }: { member: Member }) {
                   className="flex items-center justify-between text-sm capitalize"
                 >
                   <span>{ROLE_INFO[role]?.label ?? role}</span>
-                  {role === member.role && <Check className="size-4" />}
+                  {role === member.role && <Check data-slot="icon" />}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -111,7 +114,7 @@ export function MemberRow({ member }: { member: Member }) {
                 size="icon-sm"
                 className="text-muted-foreground hover:text-foreground"
               >
-                <MoreVertical />
+                <MoreVertical data-slot="icon" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -122,7 +125,7 @@ export function MemberRow({ member }: { member: Member }) {
                       onSelect={(e) => e.preventDefault()}
                       className="text-destructive focus:text-destructive"
                     >
-                      <LogOut className="size-4 mr-2" />
+                      <LogOut data-slot="icon" />
                       Leave workspace
                     </DropdownMenuItem>
                   }
@@ -141,7 +144,7 @@ export function MemberRow({ member }: { member: Member }) {
                       onSelect={(e) => e.preventDefault()}
                       className="text-destructive focus:text-destructive cursor-pointer"
                     >
-                      <Trash2 className="size-4 mr-2" />
+                      <Trash2 data-slot="icon" />
                       Remove member
                     </DropdownMenuItem>
                   }

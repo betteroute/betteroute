@@ -30,9 +30,9 @@ export function NavUser({ user }: { user: User }) {
 
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSuccess: () => {
+    onSettled: () => {
       queryClient.clear();
-      navigate({ to: "/login" });
+      navigate({ to: "/login", replace: true });
     },
   });
 
@@ -59,7 +59,7 @@ export function NavUser({ user }: { user: User }) {
                   {user.email}
                 </span>
               </div>
-              <ChevronsUpDown className="ml-auto" />
+              <ChevronsUpDown data-slot="icon" className="ml-auto" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent
@@ -96,21 +96,21 @@ export function NavUser({ user }: { user: User }) {
                   })
                 }
               >
-                <Zap />
+                <Zap data-slot="icon" />
                 Upgrade Plan
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Keyboard />
+                <Keyboard data-slot="icon" />
                 Keyboard shortcuts
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Newspaper />
+                <Newspaper data-slot="icon" />
                 Changelog
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => logoutMutation.mutate()}>
-              <LogOut />
+              <LogOut data-slot="icon" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceForm } from "@/features/workspace/components/create-form";
+import { PlanStep } from "@/features/workspace/components/plan-step";
+import { useSession } from "@/features/workspace/hooks";
 import { resolveDefaultWorkspace } from "@/lib/session";
 
 export const Route = createFileRoute("/_workspace/onboarding")({
@@ -17,19 +19,27 @@ export const Route = createFileRoute("/_workspace/onboarding")({
 });
 
 function OnboardingPage() {
-  const { user } = Route.useRouteContext();
-  const [step, setStep] = useState<"welcome" | "workspace">("welcome");
+  const { user } = useSession();
+  const [step, setStep] = useState<"welcome" | "workspace" | "plan">("welcome");
+  const [newSlug, setNewSlug] = useState<string>("");
 
   return (
     <div className="flex min-h-svh flex-col">
-      <main className="flex w-full flex-1 flex-col items-center justify-center px-4">
+      <main className="flex w-full flex-1 flex-col items-center justify-center px-4 py-12">
         {step === "welcome" ? (
           <WelcomeStep
             userName={user.name}
             onContinue={() => setStep("workspace")}
           />
+        ) : step === "workspace" ? (
+          <WorkspaceStep
+            onAfterCreate={(slug) => {
+              setNewSlug(slug);
+              setStep("plan");
+            }}
+          />
         ) : (
-          <WorkspaceStep />
+          <PlanStep slug={newSlug} />
         )}
       </main>
 
@@ -75,7 +85,11 @@ function WelcomeStep({
   );
 }
 
-function WorkspaceStep() {
+function WorkspaceStep({
+  onAfterCreate,
+}: {
+  onAfterCreate: (s: string) => void;
+}) {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-10 flex justify-center">
@@ -92,7 +106,7 @@ function WorkspaceStep() {
           </p>
         </div>
 
-        <CreateWorkspaceForm />
+        <CreateWorkspaceForm onAfterCreate={onAfterCreate} />
       </div>
     </div>
   );
