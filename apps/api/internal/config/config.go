@@ -31,11 +31,25 @@ type Config struct {
 
 	// Short link domains owned by the platform, available to all users.
 	// First entry is the default for new links. e.g. "br.link,btrt.io"
-	PlatformDomains []string `env:"PLATFORM_DOMAINS" envSeparator:"," envDefault:"localhost:8080"`
+	PlatformDomains []string `env:"PLATFORM_DOMAINS" envSeparator:"," envDefault:"localhost:8080,localhost,127.0.0.1"`
+
+	// DNS Setup Instructions
+	TXTValidationPrefix string `env:"TXT_VALIDATION_PREFIX" envDefault:"_betteroute."`
+	ProxyCNAME          string `env:"PROXY_CNAME"           envDefault:"proxy.localhost"`
+	ProxyIP             string `env:"PROXY_IP"              envDefault:"127.0.0.1"`
 
 	// Polar (Merchant of Record) — leave blank to disable billing
+	PolarSandbox       bool   `env:"POLAR_SANDBOX"          envDefault:"false"`
 	PolarAccessToken   string `env:"POLAR_ACCESS_TOKEN"`
 	PolarWebhookSecret string `env:"POLAR_WEBHOOK_SECRET"`
+
+	// Polar Product IDs per environment (Sandbox/Production)
+	PolarProMonthlyID       string `env:"POLAR_PRO_MONTHLY_ID"`
+	PolarProYearlyID        string `env:"POLAR_PRO_YEARLY_ID"`
+	PolarTeamMonthlyID      string `env:"POLAR_TEAM_MONTHLY_ID"`
+	PolarTeamYearlyID       string `env:"POLAR_TEAM_YEARLY_ID"`
+	PolarEntYearlyID        string `env:"POLAR_ENT_YEARLY_ID"`
+	PolarSelfHostedYearlyID string `env:"POLAR_SELFHOSTED_YEARLY_ID"`
 
 	// ClickHouse — leave blank to disable analytics
 	ClickHouseDSN string `env:"CLICKHOUSE_DSN"`
