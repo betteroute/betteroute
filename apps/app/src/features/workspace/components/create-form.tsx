@@ -12,11 +12,9 @@ import { slugify } from "@/lib/url-utils";
 
 export function CreateWorkspaceForm({
   onSuccess,
-  onAfterCreate,
   autoFocus = true,
 }: {
   onSuccess?: () => void;
-  onAfterCreate?: (slug: string) => void;
   autoFocus?: boolean;
 }) {
   const navigate = useNavigate();
@@ -27,11 +25,7 @@ export function CreateWorkspaceForm({
     onSuccess: async (ws) => {
       onSuccess?.();
       await queryClient.invalidateQueries({ queryKey: workspaceKeys.list() });
-      if (onAfterCreate) {
-        onAfterCreate(ws.slug);
-      } else {
-        navigate({ to: "/$slug", params: { slug: ws.slug } });
-      }
+      navigate({ to: "/$slug", params: { slug: ws.slug } });
     },
   });
 

@@ -88,4 +88,3 @@ export async function acceptInvitation(token: string) {
     .post("workspaces/accept-invitation", { json: { token } })
     .json<WorkspaceWithRole>();
 }
-

@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Logo } from "@/components/shared/logo";
 import { Button } from "@/components/ui/button";
 import { CreateWorkspaceForm } from "@/features/workspace/components/create-form";
-import { PlanStep } from "@/features/workspace/components/plan-step";
 import { useSession } from "@/features/workspace/hooks";
 import { resolveDefaultWorkspace } from "@/lib/session";
 
@@ -20,8 +19,7 @@ export const Route = createFileRoute("/_workspace/onboarding")({
 
 function OnboardingPage() {
   const { user } = useSession();
-  const [step, setStep] = useState<"welcome" | "workspace" | "plan">("welcome");
-  const [newSlug, setNewSlug] = useState<string>("");
+  const [step, setStep] = useState<"welcome" | "workspace">("welcome");
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -31,15 +29,8 @@ function OnboardingPage() {
             userName={user.name}
             onContinue={() => setStep("workspace")}
           />
-        ) : step === "workspace" ? (
-          <WorkspaceStep
-            onAfterCreate={(slug) => {
-              setNewSlug(slug);
-              setStep("plan");
-            }}
-          />
         ) : (
-          <PlanStep slug={newSlug} />
+          <WorkspaceStep />
         )}
       </main>
 
@@ -85,11 +76,7 @@ function WelcomeStep({
   );
 }
 
-function WorkspaceStep({
-  onAfterCreate,
-}: {
-  onAfterCreate: (s: string) => void;
-}) {
+function WorkspaceStep() {
   return (
     <div className="w-full max-w-sm">
       <div className="mb-10 flex justify-center">
@@ -106,7 +93,7 @@ function WorkspaceStep({
           </p>
         </div>
 
-        <CreateWorkspaceForm onAfterCreate={onAfterCreate} />
+        <CreateWorkspaceForm />
       </div>
     </div>
   );
