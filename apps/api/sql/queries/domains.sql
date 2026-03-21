@@ -11,22 +11,18 @@ WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL;
 
 -- name: FindDomainByHostname :one
 SELECT * FROM domains
-WHERE hostname = $1 AND deleted_at IS NULL;
+WHERE hostname = $1 AND deleted_at IS NULL AND status = 'active';
 
 -- name: ResolveDomain :one
 -- Redirect hot path: resolve hostname → domain_id + workspace_id + fallback_url.
 -- Uses the covering index on hostname.
 SELECT id, workspace_id, fallback_url FROM domains
-WHERE hostname = $1 AND deleted_at IS NULL;
+WHERE hostname = $1 AND deleted_at IS NULL AND status = 'active';
 
 -- name: ListDomainsByWorkspace :many
 SELECT * FROM domains
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC;
-
--- name: CountDomainsByWorkspace :one
-SELECT COUNT(*) FROM domains
-WHERE workspace_id = $1 AND deleted_at IS NULL;
 
 -- name: UpdateDomainStatus :one
 UPDATE domains SET
@@ -40,7 +36,7 @@ RETURNING *;
 UPDATE domains SET
     last_checked_at = NOW(),
     updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1 AND deleted_at IS NULL;
 
 -- name: SoftDeleteDomain :execrows
 UPDATE domains SET

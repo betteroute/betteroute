@@ -26,7 +26,7 @@ CREATE TABLE domains (
         CHECK (char_length(hostname) BETWEEN 4 AND 253),
 
     CONSTRAINT domains_hostname_format
-        CHECK (hostname ~ '^([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$'),
+        CHECK (hostname ~ '^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}$'),
 
     CONSTRAINT domains_status_check
         CHECK (status IN ('pending', 'active', 'suspended')),
@@ -40,6 +40,12 @@ CREATE TABLE domains (
 CREATE UNIQUE INDEX idx_domains_hostname_active
     ON domains(hostname)
     INCLUDE (id, workspace_id, fallback_url)
+    WHERE deleted_at IS NULL AND status = 'active';
+
+-- Prevent duplicate hostnames across a workspace (or globally if no workspace_id in index).
+-- This ensures only one record (pending or active) exists for a hostname at a time.
+CREATE UNIQUE INDEX idx_domains_hostname_unique
+    ON domains(hostname)
     WHERE deleted_at IS NULL;
 
 -- List domains for a workspace ("Domains" settings page).

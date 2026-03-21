@@ -3,6 +3,7 @@ package domain
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 
 	"github.com/gofiber/fiber/v3"
 
@@ -18,11 +19,20 @@ import (
 type Handler struct {
 	svc             *Service
 	platformDomains []string
+	txtPrefix       string
+	proxyCNAME      string
+	proxyIP         string
 }
 
 // NewHandler creates a new domain handler.
-func NewHandler(svc *Service, platformDomains []string) *Handler {
-	return &Handler{svc: svc, platformDomains: platformDomains}
+func NewHandler(svc *Service, platformDomains []string, txtPrefix, proxyCNAME, proxyIP string) *Handler {
+	return &Handler{
+		svc:             svc,
+		platformDomains: platformDomains,
+		txtPrefix:       txtPrefix,
+		proxyCNAME:      proxyCNAME,
+		proxyIP:         proxyIP,
+	}
 }
 
 // Register mounts domain CRUD and verification routes on the given router.
@@ -34,6 +44,12 @@ func (h *Handler) Register(r fiber.Router) {
 	r.Patch("/:id", h.Update)
 	r.Delete("/:id", h.Delete)
 	r.Post("/:id/verify", h.Verify)
+}
+
+// RegisterInternal mounts unauthenticated internal endpoints.
+// These must be firewalled in production — only Caddy should access them.
+func (h *Handler) RegisterInternal(app fiber.Router) {
+	app.Get("/internal/domain-check", h.checkDomain)
 }
 
 // @Summary     List domains
@@ -54,6 +70,10 @@ func (h *Handler) List(c fiber.Ctx) error {
 	domains, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
 		return mapError(err)
+	}
+
+	for i := range domains {
+		domains[i].DNS = domains[i].DNSInstructions(h.txtPrefix, h.proxyCNAME, h.proxyIP)
 	}
 
 	return c.JSON(domains)
@@ -92,6 +112,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 		return mapError(err)
 	}
 
+	d.DNS = d.DNSInstructions(h.txtPrefix, h.proxyCNAME, h.proxyIP)
 	return c.JSON(d)
 }
 
@@ -140,16 +161,8 @@ func (h *Handler) Create(c fiber.Ctx) error {
 		return mapError(err)
 	}
 
-	// Return the domain with DNS setup instructions.
-	type response struct {
-		Domain
-		DNS DNSSetup `json:"dns"`
-	}
-
-	return c.Status(fiber.StatusCreated).JSON(response{
-		Domain: *d,
-		DNS:    d.DNSInstructions(),
-	})
+	d.DNS = d.DNSInstructions(h.txtPrefix, h.proxyCNAME, h.proxyIP)
+	return c.Status(fiber.StatusCreated).JSON(d)
 }
 
 // @Summary     Update domain
@@ -190,6 +203,7 @@ func (h *Handler) Update(c fiber.Ctx) error {
 		return mapError(err)
 	}
 
+	d.DNS = d.DNSInstructions(h.txtPrefix, h.proxyCNAME, h.proxyIP)
 	return c.JSON(d)
 }
 
@@ -246,6 +260,7 @@ func (h *Handler) Verify(c fiber.Ctx) error {
 		return mapError(err)
 	}
 
+	d.DNS = d.DNSInstructions(h.txtPrefix, h.proxyCNAME, h.proxyIP)
 	return c.JSON(d)
 }
 
@@ -261,14 +276,36 @@ func mapError(err error) error {
 	case errors.Is(err, ErrDNSNotFound):
 		return errs.Validation([]errs.FieldError{{
 			Field:   "hostname",
-			Message: "no TXT record found on _betteroute." + " — ensure the record is set and DNS has propagated",
+			Message: "no TXT record found, ensure the record is set and DNS has propagated",
 		}})
 	case errors.Is(err, ErrDNSMismatch):
 		return errs.Validation([]errs.FieldError{{
 			Field:   "hostname",
-			Message: "TXT record found but value does not match the expected verification token",
+			Message: "TXT record does not match the verification token",
 		}})
 	default:
 		return errs.Internal("").WithCause(err)
 	}
+}
+
+// checkDomain is an internal endpoint for Caddy's on-demand TLS.
+// Returns 200 if the hostname belongs to an active verified domain, 404 otherwise.
+// Must not require authentication — access is restricted via firewall.
+func (h *Handler) checkDomain(c fiber.Ctx) error {
+	hostname := c.Query("hostname")
+	if hostname == "" {
+		return c.SendStatus(fiber.StatusBadRequest)
+	}
+
+	// Platform domains are always valid.
+	if slices.Contains(h.platformDomains, hostname) {
+		return c.SendStatus(fiber.StatusOK)
+	}
+
+	_, err := h.svc.FindByHostname(c.Context(), hostname)
+	if err != nil {
+		return c.SendStatus(fiber.StatusNotFound)
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }

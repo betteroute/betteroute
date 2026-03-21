@@ -12,16 +12,19 @@ import (
 
 // Service implements domain business logic.
 type Service struct {
-	store *Store
+	store     *Store
+	txtPrefix string
 }
 
 // NewService creates a new domain service.
-func NewService(store *Store) *Service {
-	return &Service{store: store}
+func NewService(store *Store, txtPrefix string) *Service {
+	return &Service{store: store, txtPrefix: txtPrefix}
 }
 
 // Create generates a verification token and persists a new domain.
 func (s *Service) Create(ctx context.Context, workspaceID, userID string, input CreateInput) (*Domain, error) {
+	hostname := strings.ToLower(input.Hostname)
+
 	token, err := generateVerificationToken()
 	if err != nil {
 		return nil, fmt.Errorf("generating verification token: %w", err)
@@ -31,7 +34,7 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID string, input 
 		ID:                "dom_" + xid.New().String(),
 		WorkspaceID:       workspaceID,
 		CreatedBy:         userID,
-		Hostname:          strings.ToLower(input.Hostname),
+		Hostname:          hostname,
 		VerificationToken: token,
 		FallbackURL:       input.FallbackURL,
 	}
@@ -59,6 +62,11 @@ func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
 	return s.store.SoftDelete(ctx, id, workspaceID)
 }
 
+// FindByHostname retrieves a domain by its hostname (used by internal endpoints).
+func (s *Service) FindByHostname(ctx context.Context, hostname string) (*Domain, error) {
+	return s.store.FindByHostname(ctx, hostname)
+}
+
 // Verify performs a DNS TXT lookup to confirm domain ownership and activates the domain.
 func (s *Service) Verify(ctx context.Context, id, workspaceID string) (*Domain, error) {
 	d, err := s.store.FindByID(ctx, id, workspaceID)
@@ -70,10 +78,13 @@ func (s *Service) Verify(ctx context.Context, id, workspaceID string) (*Domain, 
 		return nil, ErrAlreadyVerified
 	}
 
-	// Look up TXT records on _betteroute.<hostname>.
-	txtHost := "_betteroute." + d.Hostname
+	// Look up TXT records with a bounded timeout to avoid blocking on slow DNS.
+	txtHost := s.txtPrefix + d.Hostname
+	lookupCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	resolver := &net.Resolver{}
-	records, err := resolver.LookupTXT(ctx, txtHost)
+	records, err := resolver.LookupTXT(lookupCtx, txtHost)
 	if err != nil || len(records) == 0 {
 		return nil, ErrDNSNotFound
 	}

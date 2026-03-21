@@ -7,6 +7,8 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/net/publicsuffix"
+
 	"github.com/execrc/betteroute/internal/opt"
 )
 
@@ -23,24 +25,42 @@ type Domain struct {
 	LastCheckedAt     *time.Time `json:"last_checked_at,omitempty"`
 	CreatedAt         time.Time  `json:"created_at"`
 	UpdatedAt         time.Time  `json:"updated_at"`
+
+	DNS *DNSSetup `json:"dns,omitempty"` // Attached dynamically by the handler for presentation
 }
 
 // DNSInstructions returns the DNS records the user must configure.
-func (d *Domain) DNSInstructions() DNSSetup {
-	return DNSSetup{
-		TXTHost:    "_betteroute." + d.Hostname,
-		TXTValue:   d.VerificationToken,
-		CNAMEHost:  d.Hostname,
-		CNAMEValue: "proxy.betteroute.app",
+func (d *Domain) DNSInstructions(txtPrefix, proxyCNAME, proxyIP string) *DNSSetup {
+	setup := &DNSSetup{
+		TXTHost:  txtPrefix + d.Hostname,
+		TXTValue: d.VerificationToken,
 	}
+
+	// Calculate if the domain is Apex (e.g. "example.com") or Subdomain (e.g. "link.example.com")
+	eTLD1, err := publicsuffix.EffectiveTLDPlusOne(d.Hostname)
+	isApex := err == nil && eTLD1 == d.Hostname
+
+	if isApex {
+		// Apex domains strictly require A Records
+		setup.ARecordHost = "@"
+		setup.ARecordValue = proxyIP
+	} else {
+		// Subdomains strictly require CNAME Records
+		setup.CNAMEHost = d.Hostname
+		setup.CNAMEValue = proxyCNAME
+	}
+
+	return setup
 }
 
 // DNSSetup describes the DNS records a user needs to add.
 type DNSSetup struct {
-	TXTHost    string `json:"txt_host"`
-	TXTValue   string `json:"txt_value"`
-	CNAMEHost  string `json:"cname_host"`
-	CNAMEValue string `json:"cname_value"`
+	TXTHost      string `json:"txt_host"`
+	TXTValue     string `json:"txt_value"`
+	CNAMEHost    string `json:"cname_host,omitempty"`
+	CNAMEValue   string `json:"cname_value,omitempty"`
+	ARecordHost  string `json:"a_record_host,omitempty"`
+	ARecordValue string `json:"a_record_value,omitempty"`
 }
 
 // CreateInput is the input for adding a custom domain.
