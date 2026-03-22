@@ -9,18 +9,6 @@ import (
 	"context"
 )
 
-const countFoldersByWorkspace = `-- name: CountFoldersByWorkspace :one
-SELECT COUNT(*) FROM folders
-WHERE workspace_id = $1 AND deleted_at IS NULL
-`
-
-func (q *Queries) CountFoldersByWorkspace(ctx context.Context, workspaceID string) (int64, error) {
-	row := q.db.QueryRow(ctx, countFoldersByWorkspace, workspaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const findFolderByID = `-- name: FindFolderByID :one
 SELECT id, workspace_id, created_by, name, color, position, deleted_at, created_at, updated_at FROM folders
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL

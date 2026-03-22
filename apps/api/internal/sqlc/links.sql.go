@@ -23,7 +23,7 @@ func (q *Queries) CountLinksByWorkspace(ctx context.Context, workspaceID string)
 }
 
 const findLinkByID = `-- name: FindLinkByID :one
-SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, created_by, folder_id, domain_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 LIMIT 1
 `
@@ -41,50 +41,7 @@ func (q *Queries) FindLinkByID(ctx context.Context, arg FindLinkByIDParams) (Lin
 		&i.WorkspaceID,
 		&i.CreatedBy,
 		&i.FolderID,
-		&i.ShortCode,
-		&i.DestUrl,
-		&i.Title,
-		&i.Description,
-		&i.IsActive,
-		&i.StartsAt,
-		&i.ExpiresAt,
-		&i.ExpirationUrl,
-		&i.MaxClicks,
-		&i.UtmSource,
-		&i.UtmMedium,
-		&i.UtmCampaign,
-		&i.UtmTerm,
-		&i.UtmContent,
-		&i.OgTitle,
-		&i.OgDescription,
-		&i.OgImage,
-		&i.ClickCount,
-		&i.UniqueClickCount,
-		&i.LastClickedAt,
-		&i.Notes,
-		&i.CreatedVia,
-		&i.DeletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const findLinkByShortCode = `-- name: FindLinkByShortCode :one
-SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
-WHERE short_code = $1 AND deleted_at IS NULL
-LIMIT 1
-`
-
-// Used by link CRUD lookups. Not on the redirect hot path (see ResolveLink).
-func (q *Queries) FindLinkByShortCode(ctx context.Context, shortCode string) (Link, error) {
-	row := q.db.QueryRow(ctx, findLinkByShortCode, shortCode)
-	var i Link
-	err := row.Scan(
-		&i.ID,
-		&i.WorkspaceID,
-		&i.CreatedBy,
-		&i.FolderID,
+		&i.DomainID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,
@@ -117,9 +74,16 @@ func (q *Queries) FindLinkByShortCode(ctx context.Context, shortCode string) (Li
 const findRedirectFallback = `-- name: FindRedirectFallback :one
 SELECT is_active, starts_at, expires_at, expiration_url, max_clicks, click_count
 FROM links
-WHERE short_code = $1 AND deleted_at IS NULL
+WHERE short_code = $1
+    AND COALESCE(domain_id, '') = $2::TEXT
+    AND deleted_at IS NULL
 LIMIT 1
 `
+
+type FindRedirectFallbackParams struct {
+	ShortCode string `json:"short_code"`
+	DomainNs  string `json:"domain_ns"`
+}
 
 type FindRedirectFallbackRow struct {
 	IsActive      bool       `json:"is_active"`
@@ -131,8 +95,8 @@ type FindRedirectFallbackRow struct {
 }
 
 // Slim diagnostic query: only called when ResolveLink returns 0 rows.
-func (q *Queries) FindRedirectFallback(ctx context.Context, shortCode string) (FindRedirectFallbackRow, error) {
-	row := q.db.QueryRow(ctx, findRedirectFallback, shortCode)
+func (q *Queries) FindRedirectFallback(ctx context.Context, arg FindRedirectFallbackParams) (FindRedirectFallbackRow, error) {
+	row := q.db.QueryRow(ctx, findRedirectFallback, arg.ShortCode, arg.DomainNs)
 	var i FindRedirectFallbackRow
 	err := row.Scan(
 		&i.IsActive,
@@ -158,7 +122,7 @@ INSERT INTO links (
     $13, $14, $15, $16, $17,
     $18, $19, $20,
     $21, $22
-) RETURNING id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
+) RETURNING id, workspace_id, created_by, folder_id, domain_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at
 `
 
 type InsertLinkParams struct {
@@ -217,6 +181,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 		&i.WorkspaceID,
 		&i.CreatedBy,
 		&i.FolderID,
+		&i.DomainID,
 		&i.ShortCode,
 		&i.DestUrl,
 		&i.Title,
@@ -247,7 +212,7 @@ func (q *Queries) InsertLink(ctx context.Context, arg InsertLinkParams) (Link, e
 }
 
 const listLinksByWorkspace = `-- name: ListLinksByWorkspace :many
-SELECT id, workspace_id, created_by, folder_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
+SELECT id, workspace_id, created_by, folder_id, domain_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -273,6 +238,7 @@ func (q *Queries) ListLinksByWorkspace(ctx context.Context, arg ListLinksByWorks
 			&i.WorkspaceID,
 			&i.CreatedBy,
 			&i.FolderID,
+			&i.DomainID,
 			&i.ShortCode,
 			&i.DestUrl,
 			&i.Title,
@@ -314,18 +280,25 @@ UPDATE links SET
     click_count = click_count + 1,
     last_clicked_at = NOW()
 WHERE short_code = $1
+    AND COALESCE(domain_id, '') = $2::TEXT
     AND deleted_at IS NULL
     AND is_active = TRUE
     AND (starts_at IS NULL OR starts_at <= NOW())
     AND (expires_at IS NULL OR expires_at > NOW())
     AND (max_clicks IS NULL OR click_count < max_clicks)
-RETURNING id, dest_url,
+RETURNING id, workspace_id, dest_url,
     utm_source, utm_medium, utm_campaign, utm_term, utm_content,
     og_title, og_description, og_image
 `
 
+type ResolveLinkParams struct {
+	ShortCode string `json:"short_code"`
+	DomainNs  string `json:"domain_ns"`
+}
+
 type ResolveLinkRow struct {
 	ID            string  `json:"id"`
+	WorkspaceID   string  `json:"workspace_id"`
 	DestUrl       string  `json:"dest_url"`
 	UtmSource     *string `json:"utm_source"`
 	UtmMedium     *string `json:"utm_medium"`
@@ -338,12 +311,14 @@ type ResolveLinkRow struct {
 }
 
 // Redirect hot path: atomic increment + return in one round-trip.
+// domain_ns scopes lookup: empty string for platform domains, domain ID for custom.
 // Returns no rows when the link is invalid (deleted, inactive, expired, not started, or click-limited).
-func (q *Queries) ResolveLink(ctx context.Context, shortCode string) (ResolveLinkRow, error) {
-	row := q.db.QueryRow(ctx, resolveLink, shortCode)
+func (q *Queries) ResolveLink(ctx context.Context, arg ResolveLinkParams) (ResolveLinkRow, error) {
+	row := q.db.QueryRow(ctx, resolveLink, arg.ShortCode, arg.DomainNs)
 	var i ResolveLinkRow
 	err := row.Scan(
 		&i.ID,
+		&i.WorkspaceID,
 		&i.DestUrl,
 		&i.UtmSource,
 		&i.UtmMedium,

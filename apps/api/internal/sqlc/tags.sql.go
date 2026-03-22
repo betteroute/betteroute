@@ -12,31 +12,24 @@ import (
 const addTagToLink = `-- name: AddTagToLink :exec
 
 INSERT INTO link_tags (link_id, tag_id)
-VALUES ($1, $2)
+SELECT l.id, t.id
+FROM links l, tags t
+WHERE l.id = $1 AND t.id = $2
+  AND l.workspace_id = $3 AND t.workspace_id = $3
+  AND l.deleted_at IS NULL AND t.deleted_at IS NULL
 ON CONFLICT (link_id, tag_id) DO NOTHING
 `
 
 type AddTagToLinkParams struct {
-	LinkID string `json:"link_id"`
-	TagID  string `json:"tag_id"`
+	LinkID      string `json:"link_id"`
+	TagID       string `json:"tag_id"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
 // Link-tag association
 func (q *Queries) AddTagToLink(ctx context.Context, arg AddTagToLinkParams) error {
-	_, err := q.db.Exec(ctx, addTagToLink, arg.LinkID, arg.TagID)
+	_, err := q.db.Exec(ctx, addTagToLink, arg.LinkID, arg.TagID, arg.WorkspaceID)
 	return err
-}
-
-const countTagsByWorkspace = `-- name: CountTagsByWorkspace :one
-SELECT COUNT(*) FROM tags
-WHERE workspace_id = $1 AND deleted_at IS NULL
-`
-
-func (q *Queries) CountTagsByWorkspace(ctx context.Context, workspaceID string) (int64, error) {
-	row := q.db.QueryRow(ctx, countTagsByWorkspace, workspaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
 }
 
 const findTagByID = `-- name: FindTagByID :one
@@ -103,41 +96,22 @@ func (q *Queries) InsertTag(ctx context.Context, arg InsertTagParams) (Tag, erro
 	return i, err
 }
 
-const listLinkIDsByTag = `-- name: ListLinkIDsByTag :many
-SELECT lt.link_id FROM link_tags lt
-JOIN tags t ON t.id = lt.tag_id
-WHERE lt.tag_id = $1 AND t.deleted_at IS NULL
-`
-
-func (q *Queries) ListLinkIDsByTag(ctx context.Context, tagID string) ([]string, error) {
-	rows, err := q.db.Query(ctx, listLinkIDsByTag, tagID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []string{}
-	for rows.Next() {
-		var link_id string
-		if err := rows.Scan(&link_id); err != nil {
-			return nil, err
-		}
-		items = append(items, link_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listTagsByLink = `-- name: ListTagsByLink :many
 SELECT t.id, t.workspace_id, t.created_by, t.name, t.color, t.deleted_at, t.created_at, t.updated_at FROM tags t
 JOIN link_tags lt ON lt.tag_id = t.id
-WHERE lt.link_id = $1 AND t.deleted_at IS NULL
+JOIN links l ON l.id = lt.link_id
+WHERE lt.link_id = $1 AND l.workspace_id = $2
+  AND t.deleted_at IS NULL AND l.deleted_at IS NULL
 ORDER BY t.name
 `
 
-func (q *Queries) ListTagsByLink(ctx context.Context, linkID string) ([]Tag, error) {
-	rows, err := q.db.Query(ctx, listTagsByLink, linkID)
+type ListTagsByLinkParams struct {
+	LinkID      string `json:"link_id"`
+	WorkspaceID string `json:"workspace_id"`
+}
+
+func (q *Queries) ListTagsByLink(ctx context.Context, arg ListTagsByLinkParams) ([]Tag, error) {
+	rows, err := q.db.Query(ctx, listTagsByLink, arg.LinkID, arg.WorkspaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -201,34 +175,25 @@ func (q *Queries) ListTagsByWorkspace(ctx context.Context, workspaceID string) (
 }
 
 const removeTagFromLink = `-- name: RemoveTagFromLink :execrows
-DELETE FROM link_tags
-WHERE link_id = $1 AND tag_id = $2
+DELETE FROM link_tags lt
+USING links l, tags t
+WHERE lt.link_id = l.id AND lt.tag_id = t.id
+  AND lt.link_id = $1 AND lt.tag_id = $2
+  AND l.workspace_id = $3 AND t.workspace_id = $3
 `
 
 type RemoveTagFromLinkParams struct {
-	LinkID string `json:"link_id"`
-	TagID  string `json:"tag_id"`
+	LinkID      string `json:"link_id"`
+	TagID       string `json:"tag_id"`
+	WorkspaceID string `json:"workspace_id"`
 }
 
 func (q *Queries) RemoveTagFromLink(ctx context.Context, arg RemoveTagFromLinkParams) (int64, error) {
-	result, err := q.db.Exec(ctx, removeTagFromLink, arg.LinkID, arg.TagID)
+	result, err := q.db.Exec(ctx, removeTagFromLink, arg.LinkID, arg.TagID, arg.WorkspaceID)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const setLinkTags = `-- name: SetLinkTags :exec
-DELETE FROM link_tags WHERE link_id = $1
-`
-
-// Replace all tags on a link. Called within a transaction:
-// 1. DELETE FROM link_tags WHERE link_id = $1
-// 2. INSERT each new tag
-// This query handles step 1.
-func (q *Queries) SetLinkTags(ctx context.Context, linkID string) error {
-	_, err := q.db.Exec(ctx, setLinkTags, linkID)
-	return err
 }
 
 const softDeleteTag = `-- name: SoftDeleteTag :execrows

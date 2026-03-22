@@ -31,7 +31,7 @@ type CreateInput struct {
 type UpdateInput struct {
 	Name     opt.Field[string] `json:"name"     validate:"omitempty,min=1,max=100" swaggertype:"string"`
 	Color    opt.Field[string] `json:"color"    validate:"omitempty,hexcolor,len=7" swaggertype:"string"`
-	Position opt.Field[*int32] `json:"position" swaggertype:"integer"`
+	Position opt.Field[*int32] `json:"position" validate:"omitempty,min=0" swaggertype:"integer"`
 }
 
 var (

@@ -14,11 +14,6 @@ SELECT * FROM folders
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY position, created_at;
 
--- name: CountFoldersByWorkspace :one
-SELECT COUNT(*) FROM folders
-WHERE workspace_id = $1 AND deleted_at IS NULL;
-
-
 -- name: SoftDeleteFolder :execrows
 UPDATE folders SET
     deleted_at = NOW(),

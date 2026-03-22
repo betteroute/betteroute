@@ -18,12 +18,6 @@ SELECT * FROM links
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
 LIMIT 1;
 
--- name: FindLinkByShortCode :one
--- Used by link CRUD lookups. Not on the redirect hot path (see ResolveLink).
-SELECT * FROM links
-WHERE short_code = $1 AND deleted_at IS NULL
-LIMIT 1;
-
 -- name: ResolveLink :one
 -- Redirect hot path: atomic increment + return in one round-trip.
 -- domain_ns scopes lookup: empty string for platform domains, domain ID for custom.
