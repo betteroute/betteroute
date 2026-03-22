@@ -100,7 +100,10 @@ func (s *Store) UpdateUserProfile(ctx context.Context, userID string, input Upda
 	}
 
 	sql, args := u.Build("users", "id = ? AND deleted_at IS NULL", userID)
-	rows, _ := s.pool.Query(ctx, sql, args...)
+	rows, err := s.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("updating profile for user %s: %w", userID, err)
+	}
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.User])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

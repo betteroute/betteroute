@@ -91,7 +91,10 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 	}
 
 	sql, args := u.Build("folders", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
-	rows, _ := s.pool.Query(ctx, sql, args...)
+	rows, err := s.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("updating folder %s: %w", id, err)
+	}
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Folder])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

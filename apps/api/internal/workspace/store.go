@@ -117,7 +117,10 @@ func (s *Store) Update(ctx context.Context, id string, input UpdateInput) (*Work
 	}
 
 	sql, args := u.Build("workspaces", "id = ? AND deleted_at IS NULL", id)
-	rows, _ := s.pool.Query(ctx, sql, args...)
+	rows, err := s.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("updating workspace %s: %w", id, err)
+	}
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Workspace])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

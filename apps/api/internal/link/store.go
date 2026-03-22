@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/execrc/betteroute/internal/db"
+	"github.com/execrc/betteroute/internal/deeplink"
 	"github.com/execrc/betteroute/internal/ptr"
 	"github.com/execrc/betteroute/internal/sqlc"
 )
@@ -162,7 +163,10 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 	}
 
 	sql, args := u.Build("links", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
-	rows, _ := s.pool.Query(ctx, sql, args...)
+	rows, err := s.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("updating link %s: %w", id, err)
+	}
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Link])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -184,6 +188,23 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	}
 	if rows == 0 {
 		return ErrNotFound
+	}
+	return nil
+}
+
+// UpsertDeepLink creates or updates deep link data for a link.
+func (s *Store) UpsertDeepLink(ctx context.Context, linkID string, dl *deeplink.ResolvedLinks) error {
+	_, err := s.q.UpsertDeepLink(ctx, sqlc.UpsertDeepLinkParams{
+		LinkID:             linkID,
+		PlatformAppID:      ptr.ToNonZero(dl.PlatformAppID),
+		WorkspaceAppID:     ptr.ToNonZero(dl.WorkspaceAppID),
+		IosDeepLink:        ptr.ToNonZero(dl.IOSDeepLink),
+		AndroidDeepLink:    ptr.ToNonZero(dl.AndroidDeepLink),
+		IosFallbackUrl:     ptr.ToNonZero(dl.IOSFallbackURL),
+		AndroidFallbackUrl: ptr.ToNonZero(dl.AndroidFallbackURL),
+	})
+	if err != nil {
+		return fmt.Errorf("upserting deep link for %s: %w", linkID, err)
 	}
 	return nil
 }

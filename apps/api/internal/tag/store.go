@@ -87,7 +87,10 @@ func (s *Store) Update(ctx context.Context, id, workspaceID string, input Update
 	}
 
 	sql, args := u.Build("tags", "id = ? AND workspace_id = ? AND deleted_at IS NULL", id, workspaceID)
-	rows, _ := s.pool.Query(ctx, sql, args...)
+	rows, err := s.pool.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, fmt.Errorf("updating tag %s: %w", id, err)
+	}
 	row, err := pgx.CollectOneRow(rows, pgx.RowToStructByPos[sqlc.Tag])
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -117,10 +120,11 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 }
 
 // AddToLink associates a tag with a link.
-func (s *Store) AddToLink(ctx context.Context, linkID, tagID string) error {
+func (s *Store) AddToLink(ctx context.Context, linkID, tagID, workspaceID string) error {
 	if err := s.q.AddTagToLink(ctx, sqlc.AddTagToLinkParams{
-		LinkID: linkID,
-		TagID:  tagID,
+		LinkID:      linkID,
+		TagID:       tagID,
+		WorkspaceID: workspaceID,
 	}); err != nil {
 		return fmt.Errorf("adding tag %s to link %s: %w", tagID, linkID, err)
 	}
@@ -128,10 +132,11 @@ func (s *Store) AddToLink(ctx context.Context, linkID, tagID string) error {
 }
 
 // RemoveFromLink removes a tag association from a link.
-func (s *Store) RemoveFromLink(ctx context.Context, linkID, tagID string) error {
+func (s *Store) RemoveFromLink(ctx context.Context, linkID, tagID, workspaceID string) error {
 	rows, err := s.q.RemoveTagFromLink(ctx, sqlc.RemoveTagFromLinkParams{
-		LinkID: linkID,
-		TagID:  tagID,
+		LinkID:      linkID,
+		TagID:       tagID,
+		WorkspaceID: workspaceID,
 	})
 	if err != nil {
 		return fmt.Errorf("removing tag %s from link %s: %w", tagID, linkID, err)
@@ -143,8 +148,11 @@ func (s *Store) RemoveFromLink(ctx context.Context, linkID, tagID string) error 
 }
 
 // ListByLink retrieves all active tags associated with a specific link.
-func (s *Store) ListByLink(ctx context.Context, linkID string) ([]Tag, error) {
-	rows, err := s.q.ListTagsByLink(ctx, linkID)
+func (s *Store) ListByLink(ctx context.Context, linkID, workspaceID string) ([]Tag, error) {
+	rows, err := s.q.ListTagsByLink(ctx, sqlc.ListTagsByLinkParams{
+		LinkID:      linkID,
+		WorkspaceID: workspaceID,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("listing tags for link %s: %w", linkID, err)
 	}
