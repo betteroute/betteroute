@@ -229,7 +229,7 @@ func (h *Handler) ListTags(c fiber.Ctx) error {
 		return err
 	}
 
-	tags, err := h.tagSvc.ListByLink(ctx, c.Params("id"))
+	tags, err := h.tagSvc.ListByLink(ctx, c.Params("id"), rbac.FromContext(ctx).WorkspaceID)
 	if err != nil {
 		return errs.Internal("").WithCause(err)
 	}
@@ -268,7 +268,7 @@ func (h *Handler) AddTag(c fiber.Ctx) error {
 		return errs.Validation(fieldErrs)
 	}
 
-	if err := h.tagSvc.AddToLink(ctx, c.Params("id"), input.TagID); err != nil {
+	if err := h.tagSvc.AddToLink(ctx, c.Params("id"), input.TagID, rbac.FromContext(ctx).WorkspaceID); err != nil {
 		return errs.Internal("").WithCause(err)
 	}
 
@@ -295,7 +295,7 @@ func (h *Handler) RemoveTag(c fiber.Ctx) error {
 		return err
 	}
 
-	if err := h.tagSvc.RemoveFromLink(ctx, c.Params("id"), c.Params("tag_id")); err != nil {
+	if err := h.tagSvc.RemoveFromLink(ctx, c.Params("id"), c.Params("tag_id"), rbac.FromContext(ctx).WorkspaceID); err != nil {
 		return errs.Internal("").WithCause(err)
 	}
 

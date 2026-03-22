@@ -57,16 +57,16 @@ func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
 }
 
 // AddToLink associates a tag with a link.
-func (s *Service) AddToLink(ctx context.Context, linkID, tagID string) error {
-	return s.store.AddToLink(ctx, linkID, tagID)
+func (s *Service) AddToLink(ctx context.Context, linkID, tagID, workspaceID string) error {
+	return s.store.AddToLink(ctx, linkID, tagID, workspaceID)
 }
 
 // RemoveFromLink removes a tag from a link.
-func (s *Service) RemoveFromLink(ctx context.Context, linkID, tagID string) error {
-	return s.store.RemoveFromLink(ctx, linkID, tagID)
+func (s *Service) RemoveFromLink(ctx context.Context, linkID, tagID, workspaceID string) error {
+	return s.store.RemoveFromLink(ctx, linkID, tagID, workspaceID)
 }
 
 // ListByLink returns all tags for a link.
-func (s *Service) ListByLink(ctx context.Context, linkID string) ([]Tag, error) {
-	return s.store.ListByLink(ctx, linkID)
+func (s *Service) ListByLink(ctx context.Context, linkID, workspaceID string) ([]Tag, error) {
+	return s.store.ListByLink(ctx, linkID, workspaceID)
 }
