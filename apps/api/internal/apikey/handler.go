@@ -152,7 +152,7 @@ func (h *Handler) Delete(c fiber.Ctx) error {
 func mapError(err error) error {
 	switch {
 	case errors.Is(err, ErrNotFound):
-		return errs.NotFound("API key", "")
+		return errs.NotFound("api key", "")
 	case errors.Is(err, ErrInvalidScope):
 		return errs.BadRequest("invalid scope")
 	case errors.Is(err, ErrScopesRequired):

@@ -10,45 +10,29 @@ import (
 	"time"
 )
 
-const countAPIKeysByWorkspace = `-- name: CountAPIKeysByWorkspace :one
-SELECT COUNT(*) FROM api_keys
-WHERE workspace_id = $1 AND deleted_at IS NULL
-`
-
-func (q *Queries) CountAPIKeysByWorkspace(ctx context.Context, workspaceID string) (int64, error) {
-	row := q.db.QueryRow(ctx, countAPIKeysByWorkspace, workspaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const findAPIKeyByHash = `-- name: FindAPIKeyByHash :one
-SELECT id, workspace_id, created_by, permission, scopes, expires_at
-FROM api_keys
+SELECT id, workspace_id, created_by, name, key_hash, key_prefix, permission, scopes, expires_at, last_used_at, deleted_at, created_at, updated_at FROM api_keys
 WHERE key_hash = $1 AND deleted_at IS NULL
 `
 
-type FindAPIKeyByHashRow struct {
-	ID          string     `json:"id"`
-	WorkspaceID string     `json:"workspace_id"`
-	CreatedBy   *string    `json:"created_by"`
-	Permission  string     `json:"permission"`
-	Scopes      []string   `json:"scopes"`
-	ExpiresAt   *time.Time `json:"expires_at"`
-}
-
-// Auth hot path: resolve key hash → workspace + scoping + creator.
-// Index-only scan via idx_api_keys_hash.
-func (q *Queries) FindAPIKeyByHash(ctx context.Context, keyHash string) (FindAPIKeyByHashRow, error) {
+// Auth hot path: resolve key hash -> API key.
+func (q *Queries) FindAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error) {
 	row := q.db.QueryRow(ctx, findAPIKeyByHash, keyHash)
-	var i FindAPIKeyByHashRow
+	var i ApiKey
 	err := row.Scan(
 		&i.ID,
 		&i.WorkspaceID,
 		&i.CreatedBy,
+		&i.Name,
+		&i.KeyHash,
+		&i.KeyPrefix,
 		&i.Permission,
 		&i.Scopes,
 		&i.ExpiresAt,
+		&i.LastUsedAt,
+		&i.DeletedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -197,7 +181,7 @@ func (q *Queries) SoftDeleteAPIKey(ctx context.Context, arg SoftDeleteAPIKeyPara
 
 const updateAPIKeyLastUsed = `-- name: UpdateAPIKeyLastUsed :exec
 UPDATE api_keys SET last_used_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) UpdateAPIKeyLastUsed(ctx context.Context, id string) error {

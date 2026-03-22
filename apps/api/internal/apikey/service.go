@@ -7,7 +7,6 @@ import (
 	"github.com/rs/xid"
 
 	"github.com/execrc/betteroute/internal/ptr"
-	"github.com/execrc/betteroute/internal/sqlc"
 )
 
 // Service implements API key business logic.
@@ -45,14 +44,14 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID string, input 
 
 	id := "key_" + xid.New().String()
 
-	key, err := s.store.Insert(ctx, sqlc.InsertAPIKeyParams{
+	key, err := s.store.Insert(ctx, InsertParams{
 		ID:          id,
 		WorkspaceID: workspaceID,
 		CreatedBy:   ptr.ToNonZero(userID),
 		Name:        input.Name,
 		KeyHash:     hash,
-		KeyPrefix:   plain[:len(Prefix)+4], // "br_live_xxxx"
-		Permission:  string(input.Permission),
+		KeyPrefix:   plain[:len(Prefix)+8], // "btr_a1b2c3d4"
+		Permission:  input.Permission,
 		Scopes:      scopesToStrings(scopes),
 		ExpiresAt:   input.ExpiresAt,
 	})

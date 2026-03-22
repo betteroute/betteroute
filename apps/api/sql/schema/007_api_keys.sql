@@ -1,7 +1,7 @@
 -- API keys
 -- Programmatic access to the API. Each key is scoped to one workspace.
 -- The raw key is shown once on creation; only the hash is stored.
--- Format: br_live_<random> (live) or br_test_<random> (test).
+-- Format: btr_<random hex>.
 
 CREATE TABLE api_keys (
     id            TEXT PRIMARY KEY,
@@ -10,7 +10,7 @@ CREATE TABLE api_keys (
 
     name          TEXT NOT NULL,                -- human label ("CI/CD", "Marketing Tool")
     key_hash      TEXT NOT NULL,                -- SHA-256 of the raw key
-    key_prefix    TEXT NOT NULL,                -- first 8 chars for identification ("br_live_")
+    key_prefix    TEXT NOT NULL,                -- first 12 chars for identification ("btr_a1b2c3d4")
     permission    TEXT NOT NULL DEFAULT 'all',  -- "all" | "read_only" | "restricted"
     scopes        TEXT[] NOT NULL DEFAULT '{}', -- e.g. {"links:read","links:write"}
     expires_at    TIMESTAMPTZ,                  -- NULL = never expires

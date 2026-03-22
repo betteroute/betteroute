@@ -115,7 +115,7 @@ var (
 
 const (
 	// Prefix is the token prefix for API keys, shared with the auth middleware.
-	Prefix    = "br_live_"
+	Prefix    = "btr_"
 	randomLen = 32
 )
 

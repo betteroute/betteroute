@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,9 +24,32 @@ func NewStore(pool *pgxpool.Pool) *Store {
 	return &Store{q: sqlc.New(pool), pool: pool}
 }
 
+// InsertParams holds the fields needed to persist a new API key.
+type InsertParams struct {
+	ID          string
+	WorkspaceID string
+	CreatedBy   *string
+	Name        string
+	KeyHash     string
+	KeyPrefix   string
+	Permission  Permission
+	Scopes      []string
+	ExpiresAt   *time.Time
+}
+
 // Insert creates a new API key record.
-func (s *Store) Insert(ctx context.Context, params sqlc.InsertAPIKeyParams) (*APIKey, error) {
-	row, err := s.q.InsertAPIKey(ctx, params)
+func (s *Store) Insert(ctx context.Context, p InsertParams) (*APIKey, error) {
+	row, err := s.q.InsertAPIKey(ctx, sqlc.InsertAPIKeyParams{
+		ID:          p.ID,
+		WorkspaceID: p.WorkspaceID,
+		CreatedBy:   p.CreatedBy,
+		Name:        p.Name,
+		KeyHash:     p.KeyHash,
+		KeyPrefix:   p.KeyPrefix,
+		Permission:  string(p.Permission),
+		Scopes:      p.Scopes,
+		ExpiresAt:   p.ExpiresAt,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("inserting api key: %w", err)
 	}
@@ -41,14 +65,7 @@ func (s *Store) FindByHash(ctx context.Context, hash string) (*APIKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("querying api key by hash: %w", err)
 	}
-	return &APIKey{
-		ID:          row.ID,
-		WorkspaceID: row.WorkspaceID,
-		CreatedBy:   ptr.From(row.CreatedBy),
-		Permission:  Permission(row.Permission),
-		Scopes:      stringsToScopes(row.Scopes),
-		ExpiresAt:   row.ExpiresAt,
-	}, nil
+	return toAPIKey(row), nil
 }
 
 // FindByID retrieves an API key by its ID.
@@ -80,11 +97,6 @@ func (s *Store) List(ctx context.Context, workspaceID string) ([]APIKey, error) 
 	return keys, nil
 }
 
-// Count returns the number of active API keys in a workspace.
-func (s *Store) Count(ctx context.Context, workspaceID string) (int64, error) {
-	return s.q.CountAPIKeysByWorkspace(ctx, workspaceID)
-}
-
 // SoftDelete marks an API key as deleted.
 func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 	rows, err := s.q.SoftDeleteAPIKey(ctx, sqlc.SoftDeleteAPIKeyParams{
@@ -102,7 +114,10 @@ func (s *Store) SoftDelete(ctx context.Context, id, workspaceID string) error {
 
 // UpdateLastUsed updates the last_used_at timestamp.
 func (s *Store) UpdateLastUsed(ctx context.Context, id string) error {
-	return s.q.UpdateAPIKeyLastUsed(ctx, id)
+	if err := s.q.UpdateAPIKeyLastUsed(ctx, id); err != nil {
+		return fmt.Errorf("updating last used for api key %s: %w", id, err)
+	}
+	return nil
 }
 
 func toAPIKey(row sqlc.ApiKey) *APIKey {
