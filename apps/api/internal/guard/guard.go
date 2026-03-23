@@ -57,7 +57,7 @@ func Scope(ctx context.Context, s rbac.Scope) error {
 // Feature checks that the workspace plan includes the given feature.
 func Feature(ctx context.Context, f entitlement.Feature) error {
 	ent := entitlement.FromContext(ctx)
-	if ent.CanAccess(f) {
+	if ent.HasFeature(f) {
 		return nil
 	}
 	return errs.Forbidden(fmt.Sprintf(
@@ -65,14 +65,14 @@ func Feature(ctx context.Context, f entitlement.Feature) error {
 	))
 }
 
-// Quota checks that the workspace has enough remaining quota to create n units.
+// Quota checks that the workspace has enough remaining quota for n units.
 func Quota(ctx context.Context, q entitlement.Quota, n int) error {
 	ent := entitlement.FromContext(ctx)
-	if ent.CanCreate(q, n) {
+	if ent.CanConsume(q, n) {
 		return nil
 	}
 	return errs.PaymentRequired(fmt.Sprintf(
 		"%s quota exceeded (%d/%d) on the %s plan",
-		q, ent.Used(q), ent.Plan.Caps[q], ent.Plan.Name,
+		q, ent.Used(q), ent.Cap(q), ent.Plan.Name,
 	))
 }

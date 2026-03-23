@@ -2,13 +2,14 @@ package entitlement
 
 import "log/slog"
 
-// minTier declares the minimum tier required to access each feature.
-var minTier = [featureCount]Tier{
-	// Free
+// featureTier declares the minimum tier required to access each feature.
+// Grouped to mirror the Feature constant order.
+var featureTier = [featureCount]Tier{
+	// Free — explicitly listed for documentation; zero value is Free.
+	FeatureAPI:           Free,
 	FeatureFolders:       Free,
 	FeatureTags:          Free,
 	FeatureCustomDomains: Free,
-	FeatureAPI:           Free,
 
 	// Pro
 	FeatureCSVExport:          Pro,
@@ -27,22 +28,22 @@ var minTier = [featureCount]Tier{
 	FeatureJSONExport:         Pro,
 	FeatureWebhooks:           Pro,
 	FeatureLinkScheduling:     Pro,
+	FeatureDeepLinking:        Pro,
+	FeatureCustomOGMeta:       Pro,
+	FeatureRealtimeAnalytics:  Pro,
 
-	// Team
-	FeatureFolderAccessControl: Team,
-	FeatureGeoTargeting:        Team,
-	FeatureBrowserTargeting:    Team,
-	FeatureOSTargeting:         Team,
-	FeatureLanguageTargeting:   Team,
-	FeatureTimeRouting:         Team,
-	FeatureDateRangeRouting:    Team,
-	FeatureReferrerRestriction: Team,
-	FeatureCountryBlocklist:    Team,
-	FeatureEmailGate:           Team,
-	FeatureABTesting:           Team,
-	FeatureCustomOGMeta:        Team,
-	FeatureDeepLinking:         Team,
-	FeatureRealtimeAnalytics:   Team,
+	// Business
+	FeatureFolderAccessControl: Business,
+	FeatureGeoTargeting:        Business,
+	FeatureBrowserTargeting:    Business,
+	FeatureOSTargeting:         Business,
+	FeatureLanguageTargeting:   Business,
+	FeatureTimeRouting:         Business,
+	FeatureDateRangeRouting:    Business,
+	FeatureReferrerRestriction: Business,
+	FeatureCountryBlocklist:    Business,
+	FeatureEmailGate:           Business,
+	FeatureABTesting:           Business,
 
 	// Enterprise
 	FeatureSSO:        Enterprise,
@@ -53,14 +54,14 @@ var minTier = [featureCount]Tier{
 
 // featureNames maps each Feature to its stable string key.
 var featureNames = [featureCount]string{
-	FeatureAPI:             "api_access",
-	FeatureLinkExpiration:  "link_expiration",
-	FeatureDeviceTargeting: "device_targeting",
-	FeatureFolders:         "folders",
-	FeatureTags:            "tags",
-	FeatureCSVExport:       "csv_export",
+	FeatureAPI:           "api_access",
+	FeatureFolders:       "folders",
+	FeatureTags:          "tags",
+	FeatureCustomDomains: "custom_domains",
 
-	FeatureCustomDomains:      "custom_domains",
+	FeatureCSVExport:          "csv_export",
+	FeatureDeviceTargeting:    "device_targeting",
+	FeatureLinkExpiration:     "link_expiration",
 	FeaturePasswordProtection: "password_protection",
 	FeatureClickExpiration:    "click_expiration",
 	FeatureOneTimeLinks:       "one_time_links",
@@ -74,6 +75,9 @@ var featureNames = [featureCount]string{
 	FeatureJSONExport:         "json_export",
 	FeatureWebhooks:           "webhooks",
 	FeatureLinkScheduling:     "link_scheduling",
+	FeatureDeepLinking:        "deep_linking",
+	FeatureCustomOGMeta:       "custom_og_meta",
+	FeatureRealtimeAnalytics:  "realtime_analytics",
 
 	FeatureFolderAccessControl: "folder_access_control",
 	FeatureGeoTargeting:        "geo_targeting",
@@ -86,9 +90,6 @@ var featureNames = [featureCount]string{
 	FeatureCountryBlocklist:    "country_blocklist",
 	FeatureEmailGate:           "email_gate",
 	FeatureABTesting:           "ab_testing",
-	FeatureCustomOGMeta:        "custom_og_meta",
-	FeatureDeepLinking:         "deep_linking",
-	FeatureRealtimeAnalytics:   "realtime_analytics",
 
 	FeatureSSO:        "sso_saml",
 	FeatureAuditLogs:  "audit_logs",
@@ -118,13 +119,13 @@ var catalog = map[string]Plan{
 		Caps: Caps{
 			QuotaLinks:              25,
 			QuotaClicks:             1_000,
-			QuotaDomains:            3,
+			QuotaDomains:            1,
 			QuotaWebhooks:           0,
 			QuotaAPIKeys:            1,
-			QuotaMembers:            3,
-			QuotaWorkspaces:         3,
-			QuotaFolders:            10,
-			QuotaTags:               25,
+			QuotaMembers:            1,
+			QuotaWorkspaces:         2,
+			QuotaFolders:            5,
+			QuotaTags:               10,
 			QuotaAPIRateLimit:       60,
 			QuotaAnalyticsRetention: 30,
 		},
@@ -137,16 +138,16 @@ var catalog = map[string]Plan{
 			QuotaDomains:            10,
 			QuotaWebhooks:           5,
 			QuotaAPIKeys:            10,
-			QuotaMembers:            10,
-			QuotaWorkspaces:         10,
+			QuotaMembers:            3,
+			QuotaWorkspaces:         5,
 			QuotaFolders:            100,
-			QuotaTags:               unlimited,
+			QuotaTags:               Unlimited,
 			QuotaAPIRateLimit:       600,
 			QuotaAnalyticsRetention: 365,
 		},
 	},
-	"team": {
-		Name: "Team", Tier: Team,
+	"business": {
+		Name: "Business", Tier: Business,
 		Caps: Caps{
 			QuotaLinks:              10_000,
 			QuotaClicks:             250_000,
@@ -155,8 +156,8 @@ var catalog = map[string]Plan{
 			QuotaAPIKeys:            100,
 			QuotaMembers:            25,
 			QuotaWorkspaces:         50,
-			QuotaFolders:            unlimited,
-			QuotaTags:               unlimited,
+			QuotaFolders:            Unlimited,
+			QuotaTags:               Unlimited,
 			QuotaAPIRateLimit:       3_000,
 			QuotaAnalyticsRetention: 1_095,
 		},
@@ -164,33 +165,33 @@ var catalog = map[string]Plan{
 	"enterprise": {
 		Name: "Enterprise", Tier: Enterprise,
 		Caps: Caps{
-			QuotaLinks:              unlimited,
-			QuotaClicks:             unlimited,
-			QuotaDomains:            unlimited,
-			QuotaWebhooks:           unlimited,
-			QuotaAPIKeys:            unlimited,
-			QuotaMembers:            unlimited,
-			QuotaWorkspaces:         unlimited,
-			QuotaFolders:            unlimited,
-			QuotaTags:               unlimited,
-			QuotaAPIRateLimit:       unlimited,
-			QuotaAnalyticsRetention: unlimited,
+			QuotaLinks:              Unlimited,
+			QuotaClicks:             Unlimited,
+			QuotaDomains:            Unlimited,
+			QuotaWebhooks:           Unlimited,
+			QuotaAPIKeys:            Unlimited,
+			QuotaMembers:            Unlimited,
+			QuotaWorkspaces:         Unlimited,
+			QuotaFolders:            Unlimited,
+			QuotaTags:               Unlimited,
+			QuotaAPIRateLimit:       Unlimited,
+			QuotaAnalyticsRetention: Unlimited,
 		},
 	},
 	"selfhosted": {
 		Name: "Self-Hosted", Tier: Enterprise,
 		Caps: Caps{
-			QuotaLinks:              unlimited,
-			QuotaClicks:             unlimited,
-			QuotaDomains:            unlimited,
-			QuotaWebhooks:           unlimited,
-			QuotaAPIKeys:            unlimited,
-			QuotaMembers:            unlimited,
-			QuotaWorkspaces:         unlimited,
-			QuotaFolders:            unlimited,
-			QuotaTags:               unlimited,
-			QuotaAPIRateLimit:       unlimited,
-			QuotaAnalyticsRetention: unlimited,
+			QuotaLinks:              Unlimited,
+			QuotaClicks:             Unlimited,
+			QuotaDomains:            Unlimited,
+			QuotaWebhooks:           Unlimited,
+			QuotaAPIKeys:            Unlimited,
+			QuotaMembers:            Unlimited,
+			QuotaWorkspaces:         Unlimited,
+			QuotaFolders:            Unlimited,
+			QuotaTags:               Unlimited,
+			QuotaAPIRateLimit:       Unlimited,
+			QuotaAnalyticsRetention: Unlimited,
 		},
 	},
 }

@@ -69,8 +69,6 @@ func (e *Error) LogValue() slog.Value {
 	return slog.GroupValue(attrs...)
 }
 
-// --- Constructors ---
-
 // BadRequest creates a 400 error.
 func BadRequest(detail string) *Error {
 	return &Error{
@@ -178,8 +176,6 @@ func Internal(detail string) *Error {
 		Detail: detail,
 	}
 }
-
-// --- Fiber ErrorHandler ---
 
 // Handler returns a Fiber ErrorHandler that serializes all errors as RFC 9457
 // Problem Details. It handles three cases: *Error (our errors), *fiber.Error

@@ -1,4 +1,4 @@
-// Package entitlement defines subscription tiers, feature gates, quota caps,
+// Package entitlement defines subscription tiers, feature gates, quota limits,
 // and resolves the capability matrix for a workspace at request time.
 //
 // Plans live in application code (catalog.go). The database stores only
@@ -7,29 +7,33 @@ package entitlement
 
 import "context"
 
+// Unlimited signals that a quota has no cap.
+const Unlimited = -1
+
 // Tier ranks subscription plans. Higher tiers inherit all lower-tier capabilities.
 type Tier int
 
 const (
 	Free Tier = iota
 	Pro
-	Team
+	Business
 	Enterprise
 )
 
+// Feature identifies a gated capability. Constants are grouped by minimum tier.
 type Feature int
 
 const (
 	// Free
 	FeatureAPI Feature = iota
-	FeatureLinkExpiration
-	FeatureDeviceTargeting
 	FeatureFolders
 	FeatureTags
-	FeatureCSVExport
+	FeatureCustomDomains
 
 	// Pro
-	FeatureCustomDomains
+	FeatureCSVExport
+	FeatureDeviceTargeting
+	FeatureLinkExpiration
 	FeaturePasswordProtection
 	FeatureClickExpiration
 	FeatureOneTimeLinks
@@ -43,8 +47,11 @@ const (
 	FeatureJSONExport
 	FeatureWebhooks
 	FeatureLinkScheduling
+	FeatureDeepLinking
+	FeatureCustomOGMeta
+	FeatureRealtimeAnalytics
 
-	// Team
+	// Business
 	FeatureFolderAccessControl
 	FeatureGeoTargeting
 	FeatureBrowserTargeting
@@ -56,9 +63,6 @@ const (
 	FeatureCountryBlocklist
 	FeatureEmailGate
 	FeatureABTesting
-	FeatureCustomOGMeta
-	FeatureDeepLinking
-	FeatureRealtimeAnalytics
 
 	// Enterprise
 	FeatureSSO
@@ -77,10 +81,11 @@ func (f Feature) String() string {
 	return "unknown"
 }
 
+// Quota identifies a metered resource limit.
 type Quota int
 
 const (
-	// Consumable — reset each usage cycle.
+	// Consumable — reset each billing cycle.
 	QuotaLinks Quota = iota
 	QuotaClicks
 
@@ -95,7 +100,7 @@ const (
 	// Account-level — scoped to the user, not workspace.
 	QuotaWorkspaces
 
-	// Configuration caps — read by other layers, not enforced by guard.
+	// Configuration — read by other layers, not enforced by guard.
 	QuotaAPIRateLimit       // requests per minute
 	QuotaAnalyticsRetention // retention in days
 
@@ -110,12 +115,14 @@ func (q Quota) String() string {
 	return "unknown"
 }
 
-// Caps holds the numeric limits for all quotas within a plan.
+// Caps holds the numeric caps for all quotas within a plan.
+// A value of Unlimited (-1) means no cap.
 type Caps [quotaCount]int
 
 // Usage holds live consumption counters, indexed by Quota.
 type Usage [quotaCount]int64
 
+// Plan is an immutable definition of a subscription tier's capabilities.
 type Plan struct {
 	Name string
 	Tier Tier
@@ -128,51 +135,72 @@ type Context struct {
 	usage Usage
 }
 
-// CanAccess returns true if the workspace plan permits the feature.
-func (c Context) CanAccess(f Feature) bool {
-	return c.Plan.Tier >= minTier[f]
+// HasFeature returns true if the workspace plan permits the feature.
+func (c Context) HasFeature(f Feature) bool {
+	return c.Plan.Tier >= featureTier[f]
 }
 
-const unlimited = -1
-
-// CanCreate returns true if the workspace has enough quota capacity to create n items.
-func (c Context) CanCreate(q Quota, n int) bool {
-	if n == 0 {
-		return true
-	}
-	if n < 0 {
-		return false
+// CanConsume returns true if the workspace has enough remaining capacity for n items.
+func (c Context) CanConsume(q Quota, n int) bool {
+	if n <= 0 {
+		return n == 0
 	}
 	limit := c.Plan.Caps[q]
-	if limit == unlimited {
+	if limit == Unlimited {
 		return true
 	}
 	return c.usage[q]+int64(n) <= int64(limit)
 }
 
-// Used returns the current usage amount for a given quota.
+// Used returns the current usage count for a given quota.
 func (c Context) Used(q Quota) int64 { return c.usage[q] }
+
+// Cap returns the plan cap for a given quota. Returns Unlimited (-1) for uncapped.
+func (c Context) Cap(q Quota) int { return c.Plan.Caps[q] }
 
 // Resolve builds the entitlement Context for a workspace.
 // Unknown plan IDs fall back to Free.
 func Resolve(planID string, usage Usage) Context {
-	p := lookup(planID)
-
-	return Context{
-		Plan:  p,
-		usage: usage,
-	}
+	return Context{Plan: lookup(planID), usage: usage}
 }
 
 type contextKey struct{}
 
-// NewContext attaches the entitlement context to the parent context.
-func NewContext(parent context.Context, ent Context) context.Context {
-	return context.WithValue(parent, contextKey{}, ent)
+// resolver holds a lazy-evaluated entitlement Context.
+// Resolved at most once per request, on first FromContext call.
+// Safe without sync.Once because Fiber processes each request in a single goroutine.
+type resolver struct {
+	done   bool
+	cached Context
+	load   func(context.Context) Context
 }
 
-// FromContext extracts the entitlement Context. Returns a zero value if absent.
+func (r *resolver) resolve(ctx context.Context) Context {
+	if !r.done {
+		r.cached = r.load(ctx)
+		r.done = true
+	}
+	return r.cached
+}
+
+// WithResolver stores a lazy entitlement loader in context.
+// The loader is called at most once, on the first FromContext access.
+// Read-only endpoints that never call guard.Feature/guard.Quota pay zero DB cost.
+func WithResolver(parent context.Context, load func(context.Context) Context) context.Context {
+	return context.WithValue(parent, contextKey{}, &resolver{load: load})
+}
+
+// NewContext stores a pre-resolved entitlement context (useful for tests).
+func NewContext(parent context.Context, ent Context) context.Context {
+	return context.WithValue(parent, contextKey{}, &resolver{done: true, cached: ent})
+}
+
+// FromContext extracts the entitlement Context, triggering lazy resolution if needed.
+// Returns a zero value (Free tier, all quotas blocked) if no resolver is set.
 func FromContext(ctx context.Context) Context {
-	c, _ := ctx.Value(contextKey{}).(Context)
-	return c
+	r, ok := ctx.Value(contextKey{}).(*resolver)
+	if !ok || r == nil {
+		return Context{}
+	}
+	return r.resolve(ctx)
 }
