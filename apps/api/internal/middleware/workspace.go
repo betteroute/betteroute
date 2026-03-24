@@ -48,6 +48,9 @@ func Workspace(svc *workspace.Service) fiber.Handler {
 			}
 		}
 
+		// Store workspace in context so handlers can read it without re-querying.
+		ctx = workspace.NewContext(ctx, ws)
+
 		c.SetContext(rbac.NewContext(ctx, rbac.Context{
 			WorkspaceID: ws.ID,
 			Status:      ws.Status,

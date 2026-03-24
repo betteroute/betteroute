@@ -3,6 +3,7 @@
 package workspace
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -62,6 +63,23 @@ type MemberRole struct {
 	WorkspaceID string
 	UserID      string
 	Role        rbac.Role
+}
+
+// Context helpers — store the resolved workspace so downstream handlers
+// can read it without re-querying.
+
+type contextKey struct{}
+
+// NewContext stores a workspace in the request context.
+func NewContext(parent context.Context, ws *Workspace) context.Context {
+	return context.WithValue(parent, contextKey{}, ws)
+}
+
+// FromContext returns the workspace stored by the middleware.
+// Returns nil if no workspace is in context (e.g. routes outside /:slug).
+func FromContext(ctx context.Context) *Workspace {
+	ws, _ := ctx.Value(contextKey{}).(*Workspace)
+	return ws
 }
 
 // CreateInput is the payload for creating a new workspace.
