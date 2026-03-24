@@ -121,10 +121,7 @@ func (h *Handler) Get(c fiber.Ctx) error {
 	}
 
 	rctx := rbac.FromContext(ctx)
-	ws, err := h.svc.Get(ctx, rctx.WorkspaceID)
-	if err != nil {
-		return mapError(err)
-	}
+	ws := FromContext(ctx)
 	return c.JSON(WithRole{Workspace: ws, Role: rctx.Role})
 }
 
@@ -304,7 +301,8 @@ func (h *Handler) Invite(c fiber.Ctx) error {
 	}
 
 	user := auth.FromContext(ctx).User
-	inv, err := h.svc.Invite(ctx, rbac.FromContext(ctx).WorkspaceID, user.ID, user.Name, input)
+	ws := FromContext(ctx)
+	inv, err := h.svc.Invite(ctx, ws.ID, user.ID, user.Name, ws.Name, input)
 	if err != nil {
 		return mapError(err)
 	}

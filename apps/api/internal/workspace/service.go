@@ -86,14 +86,14 @@ func (s *Service) checkWorkspaceLimit(ctx context.Context, userID string) error 
 		return err
 	}
 
-	maxAllowed := entitlement.Resolve("free", entitlement.Usage{}).Plan.Caps[entitlement.QuotaWorkspaces]
+	maxAllowed := entitlement.Resolve("free", entitlement.Usage{}).Cap(entitlement.QuotaWorkspaces)
 	for _, plan := range plans {
-		cap := entitlement.Resolve(plan, entitlement.Usage{}).Plan.Caps[entitlement.QuotaWorkspaces]
-		if cap == -1 {
-			return nil // unlimited
+		limit := entitlement.Resolve(plan, entitlement.Usage{}).Cap(entitlement.QuotaWorkspaces)
+		if limit == entitlement.Unlimited {
+			return nil
 		}
-		if cap > maxAllowed {
-			maxAllowed = cap
+		if limit > maxAllowed {
+			maxAllowed = limit
 		}
 	}
 
@@ -176,13 +176,8 @@ func (s *Service) RemoveMember(ctx context.Context, workspaceID, targetUserID st
 }
 
 // Invite creates a pending invitation and sends the invite email.
-func (s *Service) Invite(ctx context.Context, workspaceID, inviterID, inviterName string, input InviteInput) (*Invitation, error) {
+func (s *Service) Invite(ctx context.Context, workspaceID, inviterID, inviterName, workspaceName string, input InviteInput) (*Invitation, error) {
 	email := strings.ToLower(strings.TrimSpace(input.Email))
-
-	ws, err := s.store.FindByID(ctx, workspaceID)
-	if err != nil {
-		return nil, err
-	}
 
 	plain, hash, err := generateToken()
 	if err != nil {
@@ -202,7 +197,7 @@ func (s *Service) Invite(ctx context.Context, workspaceID, inviterID, inviterNam
 
 	inviteURL := s.webURL + "/invitations/accept?token=" + plain
 	go func() {
-		if err := s.notifier.SendWorkspaceInviteEmail(context.Background(), email, inviterName, ws.Name, inviteURL); err != nil {
+		if err := s.notifier.SendWorkspaceInviteEmail(context.Background(), email, inviterName, workspaceName, inviteURL); err != nil {
 			slog.Error("sending workspace invite email", "error", err, "workspace_id", workspaceID)
 		}
 	}()
