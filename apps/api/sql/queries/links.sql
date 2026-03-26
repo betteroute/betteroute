@@ -46,14 +46,11 @@ WHERE short_code = $1
 LIMIT 1;
 
 -- name: ListLinksByWorkspace :many
+-- Caller passes LIMIT+1 to detect has_more without a separate COUNT query.
 SELECT * FROM links
 WHERE workspace_id = $1 AND deleted_at IS NULL
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3;
-
--- name: CountLinksByWorkspace :one
-SELECT COUNT(*) FROM links
-WHERE workspace_id = $1 AND deleted_at IS NULL;
 
 -- name: SoftDeleteLink :execrows
 UPDATE links SET

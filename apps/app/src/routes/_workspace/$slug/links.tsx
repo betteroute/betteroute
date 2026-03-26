@@ -22,10 +22,11 @@ import { LinkCard } from "@/features/link/components/link-card";
 import { LINK_FILTERS } from "@/features/link/constants";
 import { linkQueries } from "@/features/link/queries";
 
+import { PAGINATION } from "@/lib/constants";
 import { useWorkspace } from "@/features/workspace/hooks";
 
 const searchSchema = z.object({
-  page: z.number().default(1).catch(1),
+  offset: z.number().default(0).catch(0),
   search: z.string().optional().catch(undefined),
   status: z.array(z.string()).optional().catch(undefined),
 });
@@ -33,10 +34,10 @@ const searchSchema = z.object({
 export const Route = createFileRoute("/_workspace/$slug/links")({
   validateSearch: searchSchema,
   search: {
-    middlewares: [stripSearchParams({ page: 1 })],
+    middlewares: [stripSearchParams({ offset: 0 })],
   },
   loaderDeps: ({ search }) => ({
-    page: search.page,
+    offset: search.offset,
     search: search.search,
     status: search.status,
   }),
@@ -55,10 +56,11 @@ function LinksPage() {
   const searchParams = Route.useSearch();
 
   const hasFilters = !!(searchParams.search || searchParams.status?.length);
+  const perPage = PAGINATION.DEFAULT_PER_PAGE;
 
   const query = useSuspenseQuery(
     linkQueries.list(workspace.slug, {
-      page: searchParams.page,
+      offset: searchParams.offset,
       search: searchParams.search,
       status: searchParams.status,
     }),
@@ -67,10 +69,11 @@ function LinksPage() {
   const links = query.data.data;
   const pagination = query.data.pagination;
   const isEmpty = links.length === 0;
+  const isFirstPage = searchParams.offset === 0;
 
   function clearAll() {
     navigate({
-      search: { page: 1 },
+      search: { offset: 0 },
       replace: true,
     });
   }
@@ -91,7 +94,7 @@ function LinksPage() {
                 search: (prev) => ({
                   ...prev,
                   status: v.status,
-                  page: 1,
+                  offset: 0,
                 }),
                 replace: true,
               });
@@ -105,7 +108,7 @@ function LinksPage() {
                 search: (prev) => ({
                   ...prev,
                   search: value || undefined,
-                  page: 1,
+                  offset: 0,
                 }),
                 replace: true,
               })
@@ -134,27 +137,21 @@ function LinksPage() {
 
         {/* Pagination */}
 
-        {pagination && pagination.total > 0 && (
-          <div className="flex items-center justify-between px-2">
-            <p className="text-sm text-muted-foreground">
-              Showing {(pagination.page - 1) * pagination.per_page + 1}–
-              {Math.min(
-                pagination.page * pagination.per_page,
-                pagination.total,
-              )}{" "}
-              of {pagination.total}
-            </p>
-
+        {!isEmpty && (
+          <div className="flex items-center justify-end px-2">
             <div className="flex items-center gap-1">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() =>
                   navigate({
-                    search: (p) => ({ ...p, page: p.page - 1 }),
+                    search: (p) => ({
+                      ...p,
+                      offset: Math.max(0, (p.offset ?? 0) - perPage),
+                    }),
                   })
                 }
-                disabled={searchParams.page <= 1}
+                disabled={isFirstPage}
               >
                 <ChevronLeft data-slot="icon" />
                 Previous
@@ -165,10 +162,13 @@ function LinksPage() {
                 size="sm"
                 onClick={() =>
                   navigate({
-                    search: (p) => ({ ...p, page: p.page + 1 }),
+                    search: (p) => ({
+                      ...p,
+                      offset: (p.offset ?? 0) + perPage,
+                    }),
                   })
                 }
-                disabled={searchParams.page >= pagination.total_pages}
+                disabled={!pagination.has_more}
               >
                 Next
                 <ChevronRight data-slot="icon" />

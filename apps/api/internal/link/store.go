@@ -76,19 +76,15 @@ func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*Link, er
 }
 
 // List retrieves a paginated list of links for a workspace.
-func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, int, error) {
+// Fetches limit+1 rows so the caller can determine has_more without a COUNT query.
+func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, error) {
 	rows, err := s.q.ListLinksByWorkspace(ctx, sqlc.ListLinksByWorkspaceParams{
 		WorkspaceID: workspaceID,
-		Limit:       ptr.ToInt32(limit),
+		Limit:       ptr.ToInt32(limit + 1),
 		Offset:      ptr.ToInt32(offset),
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("listing links: %w", err)
-	}
-
-	total, err := s.q.CountLinksByWorkspace(ctx, workspaceID)
-	if err != nil {
-		return nil, 0, fmt.Errorf("counting links: %w", err)
+		return nil, fmt.Errorf("listing links: %w", err)
 	}
 
 	links := make([]Link, len(rows))
@@ -96,7 +92,7 @@ func (s *Store) List(ctx context.Context, workspaceID string, limit, offset int)
 		links[i] = *toLink(row)
 	}
 
-	return links, int(total), nil
+	return links, nil
 }
 
 // Update partially updates a link.

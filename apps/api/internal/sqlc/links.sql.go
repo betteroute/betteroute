@@ -10,18 +10,6 @@ import (
 	"time"
 )
 
-const countLinksByWorkspace = `-- name: CountLinksByWorkspace :one
-SELECT COUNT(*) FROM links
-WHERE workspace_id = $1 AND deleted_at IS NULL
-`
-
-func (q *Queries) CountLinksByWorkspace(ctx context.Context, workspaceID string) (int64, error) {
-	row := q.db.QueryRow(ctx, countLinksByWorkspace, workspaceID)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const findLinkByID = `-- name: FindLinkByID :one
 SELECT id, workspace_id, created_by, folder_id, domain_id, short_code, dest_url, title, description, is_active, starts_at, expires_at, expiration_url, max_clicks, utm_source, utm_medium, utm_campaign, utm_term, utm_content, og_title, og_description, og_image, click_count, unique_click_count, last_clicked_at, notes, created_via, deleted_at, created_at, updated_at FROM links
 WHERE id = $1 AND workspace_id = $2 AND deleted_at IS NULL
@@ -224,6 +212,7 @@ type ListLinksByWorkspaceParams struct {
 	Offset      int32  `json:"offset"`
 }
 
+// Caller passes LIMIT+1 to detect has_more without a separate COUNT query.
 func (q *Queries) ListLinksByWorkspace(ctx context.Context, arg ListLinksByWorkspaceParams) ([]Link, error) {
 	rows, err := q.db.Query(ctx, listLinksByWorkspace, arg.WorkspaceID, arg.Limit, arg.Offset)
 	if err != nil {

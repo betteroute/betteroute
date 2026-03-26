@@ -60,15 +60,15 @@ func (h *Handler) List(c fiber.Ctx) error {
 		return err
 	}
 
-	pg, perPg := page.Normalize(parseQueryInt(c, "page"), parseQueryInt(c, "per_page"))
-	offset := page.Offset(pg, perPg)
+	perPage := page.NormalizePerPage(parseQueryInt(c, "per_page"))
+	offset := parseQueryInt(c, "offset")
 
-	links, total, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID, perPg, offset)
+	links, err := h.svc.List(ctx, rbac.FromContext(ctx).WorkspaceID, perPage, offset)
 	if err != nil {
 		return mapError(err)
 	}
 
-	return c.JSON(page.NewList(links, pg, perPg, total))
+	return c.JSON(page.NewList(links, perPage))
 }
 
 // @Summary     Get link

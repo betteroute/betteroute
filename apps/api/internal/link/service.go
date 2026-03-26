@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/rs/xid"
+
+	"github.com/execrc/betteroute/internal/deeplink"
 )
 
 // primaryDomain is the default domain for short links.
@@ -14,12 +17,13 @@ var primaryDomain = "http://localhost:8080"
 
 // Service handles link business logic.
 type Service struct {
-	store *Store
+	store  *Store
+	appSvc *deeplink.Service
 }
 
 // NewService creates a new link service.
-func NewService(store *Store) *Service {
-	return &Service{store: store}
+func NewService(store *Store, appSvc *deeplink.Service) *Service {
+	return &Service{store: store, appSvc: appSvc}
 }
 
 // Create generates a short code and persists a new link.
@@ -31,6 +35,12 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia st
 		code, err = generateShortCode()
 		if err != nil {
 			return nil, fmt.Errorf("generating short code: %w", err)
+		}
+	}
+
+	if input.WorkspaceAppID != "" && s.appSvc != nil {
+		if _, err := s.appSvc.GetWorkspaceApp(ctx, input.WorkspaceAppID, workspaceID); err != nil {
+			return nil, fmt.Errorf("invalid workspace_app_id: %w", err)
 		}
 	}
 
@@ -71,6 +81,7 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia st
 				l.ShortCode = code
 				created, err = s.store.Insert(ctx, l)
 				if err == nil {
+					s.detectAndSaveDeepLinks(ctx, created, input.WorkspaceAppID)
 					return s.enrichShortURL(created), nil
 				}
 				if !errors.Is(err, ErrShortCodeTaken) {
@@ -81,6 +92,7 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia st
 		return nil, err
 	}
 
+	s.detectAndSaveDeepLinks(ctx, created, input.WorkspaceAppID)
 	return s.enrichShortURL(created), nil
 }
 
@@ -94,15 +106,16 @@ func (s *Service) Get(ctx context.Context, id, workspaceID string) (*Link, error
 }
 
 // List returns paginated links for a workspace.
-func (s *Service) List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, int, error) {
-	links, total, err := s.store.List(ctx, workspaceID, limit, offset)
+// Returns limit+1 rows so the handler can detect has_more.
+func (s *Service) List(ctx context.Context, workspaceID string, limit, offset int) ([]Link, error) {
+	links, err := s.store.List(ctx, workspaceID, limit, offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
 	for i := range links {
 		s.enrichShortURL(&links[i])
 	}
-	return links, total, nil
+	return links, nil
 }
 
 // Update partially updates a link.
@@ -124,4 +137,37 @@ func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
 func (s *Service) enrichShortURL(l *Link) *Link {
 	l.ShortURL = primaryDomain + "/" + l.ShortCode
 	return l
+}
+
+// detectAndSaveDeepLinks auto-detects a platform app from the destination URL
+// and persists the resolved deep link URLs, natively applying Custom Workspace Apps.
+func (s *Service) detectAndSaveDeepLinks(ctx context.Context, l *Link, workspaceAppID string) {
+	if s.appSvc == nil && workspaceAppID == "" {
+		return
+	}
+
+	var dl *deeplink.ResolvedLinks
+	var err error
+
+	if s.appSvc != nil {
+		dl, err = s.appSvc.ResolveDeepLinks(ctx, l.DestURL)
+		if err != nil {
+			slog.WarnContext(ctx, "detecting deep link", "link_id", l.ID, "error", err)
+		}
+	}
+
+	if dl == nil {
+		if workspaceAppID == "" {
+			return // no platform app and no custom app, strictly nothing to save
+		}
+		dl = &deeplink.ResolvedLinks{}
+	}
+
+	if workspaceAppID != "" {
+		dl.WorkspaceAppID = workspaceAppID
+	}
+
+	if err := s.store.UpsertDeepLink(ctx, l.ID, dl); err != nil {
+		slog.WarnContext(ctx, "upserting deep link", "link_id", l.ID, "error", err)
+	}
 }

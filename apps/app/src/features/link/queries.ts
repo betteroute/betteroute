@@ -7,7 +7,7 @@ import type { CreateInput, UpdateInput } from "./schemas";
 import type { Link } from "./types";
 
 export interface LinkFilters {
-  page?: number;
+  offset?: number;
   perPage?: number;
   search?: string;
   status?: string[];
@@ -26,9 +26,9 @@ export const linkQueries = {
       queryKey: linkKeys.list(slug, filters),
       queryFn: () => {
         const params: Record<string, string | number> = {
-          page: filters.page ?? PAGINATION.DEFAULT_PAGE,
           per_page: filters.perPage ?? PAGINATION.DEFAULT_PER_PAGE,
         };
+        if (filters.offset) params.offset = filters.offset;
         if (filters.search) params.search = filters.search;
         if (filters.status?.length) params.status = filters.status.join(",");
 

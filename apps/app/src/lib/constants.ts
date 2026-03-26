@@ -12,6 +12,5 @@ export const API_TIMEOUT = {
 
 // Pagination defaults
 export const PAGINATION = {
-  DEFAULT_PAGE: 1,
   DEFAULT_PER_PAGE: 20,
 } as const;

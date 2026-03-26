@@ -1,20 +1,18 @@
 // Package page provides pagination utilities for list endpoints.
+//
+// Uses the LIMIT+1 pattern: fetch one extra row to determine has_more
+// without a separate COUNT query. O(limit) instead of O(total).
 package page
 
 const (
-	// DefaultPage is the starting page number for paginated requests.
-	DefaultPage    = 1
 	DefaultPerPage = 20
 	MaxPerPage     = 100
 )
 
 // Pagination contains metadata for paginated responses.
 type Pagination struct {
-	Page       int  `json:"page"`
-	PerPage    int  `json:"per_page"`
-	Total      int  `json:"total"`
-	TotalPages int  `json:"total_pages"`
-	HasMore    bool `json:"has_more"`
+	PerPage int  `json:"per_page"`
+	HasMore bool `json:"has_more"`
 }
 
 // List wraps paginated data with metadata.
@@ -23,45 +21,33 @@ type List[T any] struct {
 	Pagination Pagination `json:"pagination"`
 }
 
-// NewList creates a paginated list response.
+// NewList creates a paginated response from rows fetched with LIMIT+1.
+// If len(rows) > perPage, has_more is true and the extra row is trimmed.
 // Guarantees data is an empty array [] instead of null when empty.
-func NewList[T any](data []T, pg, perPg, total int) List[T] {
-	if data == nil {
-		data = []T{}
+func NewList[T any](rows []T, perPage int) List[T] {
+	hasMore := len(rows) > perPage
+	if hasMore {
+		rows = rows[:perPage]
 	}
-
-	totalPages := 0
-	if perPg > 0 {
-		totalPages = (total + perPg - 1) / perPg
+	if rows == nil {
+		rows = []T{}
 	}
-
 	return List[T]{
-		Data: data,
+		Data: rows,
 		Pagination: Pagination{
-			Page:       pg,
-			PerPage:    perPg,
-			Total:      total,
-			TotalPages: totalPages,
-			HasMore:    pg < totalPages,
+			PerPage: perPage,
+			HasMore: hasMore,
 		},
 	}
 }
 
-// Normalize clamps page and perPage to safe values.
-func Normalize(pg, perPg int) (int, int) {
-	if pg < 1 {
-		pg = DefaultPage
+// NormalizePerPage clamps per_page to safe bounds.
+func NormalizePerPage(perPage int) int {
+	if perPage < 1 {
+		return DefaultPerPage
 	}
-	if perPg < 1 {
-		perPg = DefaultPerPage
+	if perPage > MaxPerPage {
+		return MaxPerPage
 	}
-	if perPg > MaxPerPage {
-		perPg = MaxPerPage
-	}
-	return pg, perPg
-}
-
-// Offset calculates SQL OFFSET from page and perPage.
-func Offset(pg, perPg int) int {
-	return (pg - 1) * perPg
+	return perPage
 }

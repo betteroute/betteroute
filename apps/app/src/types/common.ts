@@ -28,9 +28,6 @@ export interface PaginatedResponse<T> {
 }
 
 export interface Pagination {
-  page: number;
   per_page: number;
-  total: number;
-  total_pages: number;
   has_more: boolean;
 }
