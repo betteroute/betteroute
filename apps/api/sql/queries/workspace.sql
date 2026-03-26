@@ -100,7 +100,7 @@ WHERE token_hash = $1
 
 -- name: ListWorkspaceInvitations :many
 SELECT * FROM workspace_invitations
-WHERE workspace_id = $1 AND accepted_at IS NULL
+WHERE workspace_id = $1 AND accepted_at IS NULL AND expires_at > NOW()
 ORDER BY created_at DESC;
 
 -- name: AcceptWorkspaceInvitation :exec

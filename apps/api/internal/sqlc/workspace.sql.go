@@ -323,7 +323,7 @@ func (q *Queries) ListOwnedWorkspacePlans(ctx context.Context, userID string) ([
 
 const listWorkspaceInvitations = `-- name: ListWorkspaceInvitations :many
 SELECT id, workspace_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at FROM workspace_invitations
-WHERE workspace_id = $1 AND accepted_at IS NULL
+WHERE workspace_id = $1 AND accepted_at IS NULL AND expires_at > NOW()
 ORDER BY created_at DESC
 `
 
@@ -462,17 +462,6 @@ func (q *Queries) ListWorkspacesByUser(ctx context.Context, userID string) ([]Li
 		return nil, err
 	}
 	return items, nil
-}
-
-const lockWorkspace = `-- name: LockWorkspace :one
-SELECT 1 FROM workspaces WHERE id = $1 FOR UPDATE
-`
-
-func (q *Queries) LockWorkspace(ctx context.Context, id string) (int32, error) {
-	row := q.db.QueryRow(ctx, lockWorkspace, id)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
 }
 
 const provisionWorkspace = `-- name: ProvisionWorkspace :exec
