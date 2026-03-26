@@ -46,9 +46,9 @@ type Config struct {
 	// Polar Product IDs per environment (Sandbox/Production)
 	PolarProMonthlyID       string `env:"POLAR_PRO_MONTHLY_ID"`
 	PolarProYearlyID        string `env:"POLAR_PRO_YEARLY_ID"`
-	PolarTeamMonthlyID      string `env:"POLAR_TEAM_MONTHLY_ID"`
-	PolarTeamYearlyID       string `env:"POLAR_TEAM_YEARLY_ID"`
-	PolarEntYearlyID        string `env:"POLAR_ENT_YEARLY_ID"`
+	PolarBusinessMonthlyID  string `env:"POLAR_BUSINESS_MONTHLY_ID"`
+	PolarBusinessYearlyID   string `env:"POLAR_BUSINESS_YEARLY_ID"`
+	PolarEnterpriseYearlyID string `env:"POLAR_ENTERPRISE_YEARLY_ID"`
 	PolarSelfHostedYearlyID string `env:"POLAR_SELFHOSTED_YEARLY_ID"`
 
 	// ClickHouse — leave blank to disable analytics

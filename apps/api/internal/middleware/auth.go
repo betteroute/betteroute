@@ -17,9 +17,9 @@ import (
 // auth.Context{User} (key creator) and apikey.Context (the key itself).
 func Auth(authSvc *auth.Service, apikeySvc *apikey.Service) fiber.Handler {
 	return func(c fiber.Ctx) error {
-		// Try Bearer token first (API key).
+		// Try Bearer token first (API key) — single JOIN query for key + creator.
 		if bearer := parseBearer(c); bearer != "" {
-			return authViaAPIKey(c, apikeySvc, authSvc, bearer)
+			return authViaAPIKey(c, apikeySvc, bearer)
 		}
 
 		// Fall back to session cookie.
@@ -49,23 +49,29 @@ func authViaSession(c fiber.Ctx, svc *auth.Service) error {
 
 // authViaAPIKey validates a Bearer token as an API key and injects
 // both auth.Context (key creator) and apikey.Context (key itself).
-func authViaAPIKey(c fiber.Ctx, apikeySvc *apikey.Service, authSvc *auth.Service, plain string) error {
-	key, err := apikeySvc.ValidateKey(c.Context(), plain)
+// Uses a single JOIN query to resolve key + creator in one round-trip.
+func authViaAPIKey(c fiber.Ctx, apikeySvc *apikey.Service, plain string) error {
+	key, creator, err := apikeySvc.ValidateKeyWithCreator(c.Context(), plain)
 	if err != nil {
 		return errs.Unauthorized("")
 	}
 
-	if key.CreatedBy == "" {
-		return errs.Unauthorized("") // orphaned key
-	}
-
-	user, err := authSvc.FindUserByID(c.Context(), key.CreatedBy)
-	if err != nil {
+	if creator.Status != "active" {
 		return errs.Unauthorized("")
 	}
 
-	if user.Status != "active" {
-		return errs.Unauthorized("")
+	user := &auth.User{
+		ID:              creator.ID,
+		Name:            creator.Name,
+		Email:           creator.Email,
+		EmailVerifiedAt: creator.EmailVerifiedAt,
+		AvatarURL:       creator.AvatarURL,
+		Status:          creator.Status,
+		OnboardedAt:     creator.OnboardedAt,
+		Timezone:        creator.Timezone,
+		LastLoginAt:     creator.LastLoginAt,
+		CreatedAt:       creator.CreatedAt,
+		UpdatedAt:       creator.UpdatedAt,
 	}
 
 	// Inject auth context (key acts on behalf of creator).

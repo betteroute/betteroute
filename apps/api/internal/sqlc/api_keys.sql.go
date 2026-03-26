@@ -68,6 +68,74 @@ func (q *Queries) FindAPIKeyByID(ctx context.Context, arg FindAPIKeyByIDParams) 
 	return i, err
 }
 
+const findAPIKeyWithCreator = `-- name: FindAPIKeyWithCreator :one
+SELECT
+    k.id, k.workspace_id, k.created_by, k.name, k.key_prefix, k.permission, k.scopes,
+    k.expires_at, k.last_used_at, k.created_at, k.updated_at,
+    u.id AS user_id, u.name AS user_name, u.email AS user_email,
+    u.email_verified_at, u.avatar_url AS user_avatar_url, u.status AS user_status,
+    u.onboarded_at, u.last_login_at, u.timezone, u.created_at AS user_created_at, u.updated_at AS user_updated_at
+FROM api_keys k
+JOIN users u ON u.id = k.created_by AND u.deleted_at IS NULL
+WHERE k.key_hash = $1 AND k.deleted_at IS NULL
+`
+
+type FindAPIKeyWithCreatorRow struct {
+	ID              string     `json:"id"`
+	WorkspaceID     string     `json:"workspace_id"`
+	CreatedBy       *string    `json:"created_by"`
+	Name            string     `json:"name"`
+	KeyPrefix       string     `json:"key_prefix"`
+	Permission      string     `json:"permission"`
+	Scopes          []string   `json:"scopes"`
+	ExpiresAt       *time.Time `json:"expires_at"`
+	LastUsedAt      *time.Time `json:"last_used_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	UserID          string     `json:"user_id"`
+	UserName        string     `json:"user_name"`
+	UserEmail       string     `json:"user_email"`
+	EmailVerifiedAt *time.Time `json:"email_verified_at"`
+	UserAvatarUrl   *string    `json:"user_avatar_url"`
+	UserStatus      string     `json:"user_status"`
+	OnboardedAt     *time.Time `json:"onboarded_at"`
+	LastLoginAt     *time.Time `json:"last_login_at"`
+	Timezone        string     `json:"timezone"`
+	UserCreatedAt   time.Time  `json:"user_created_at"`
+	UserUpdatedAt   time.Time  `json:"user_updated_at"`
+}
+
+// Auth hot path: resolve key hash -> API key + creator in a single round-trip.
+func (q *Queries) FindAPIKeyWithCreator(ctx context.Context, keyHash string) (FindAPIKeyWithCreatorRow, error) {
+	row := q.db.QueryRow(ctx, findAPIKeyWithCreator, keyHash)
+	var i FindAPIKeyWithCreatorRow
+	err := row.Scan(
+		&i.ID,
+		&i.WorkspaceID,
+		&i.CreatedBy,
+		&i.Name,
+		&i.KeyPrefix,
+		&i.Permission,
+		&i.Scopes,
+		&i.ExpiresAt,
+		&i.LastUsedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.UserID,
+		&i.UserName,
+		&i.UserEmail,
+		&i.EmailVerifiedAt,
+		&i.UserAvatarUrl,
+		&i.UserStatus,
+		&i.OnboardedAt,
+		&i.LastLoginAt,
+		&i.Timezone,
+		&i.UserCreatedAt,
+		&i.UserUpdatedAt,
+	)
+	return i, err
+}
+
 const insertAPIKey = `-- name: InsertAPIKey :one
 INSERT INTO api_keys (
     id, workspace_id, created_by, name, key_hash, key_prefix, permission, scopes, expires_at

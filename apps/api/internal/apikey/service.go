@@ -84,6 +84,27 @@ func (s *Service) ValidateKey(ctx context.Context, plain string) (*APIKey, error
 	return key, nil
 }
 
+// ValidateKeyWithCreator resolves a plain API key to its domain object and creator
+// in a single DB round-trip. Used by the auth middleware.
+func (s *Service) ValidateKeyWithCreator(ctx context.Context, plain string) (*APIKey, *Creator, error) {
+	hash := hashKey(plain)
+
+	key, creator, err := s.store.FindByHashWithCreator(ctx, hash)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if key.ExpiresAt != nil && key.ExpiresAt.Before(time.Now()) {
+		return nil, nil, ErrExpired
+	}
+
+	go func() {
+		_ = s.store.UpdateLastUsed(context.Background(), key.ID)
+	}()
+
+	return key, creator, nil
+}
+
 // Get retrieves a single API key by ID.
 func (s *Service) Get(ctx context.Context, id, workspaceID string) (*APIKey, error) {
 	return s.store.FindByID(ctx, id, workspaceID)

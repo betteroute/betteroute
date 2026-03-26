@@ -106,6 +106,22 @@ type CreateInput struct {
 	ExpiresAt  *time.Time   `json:"expires_at" validate:"omitempty"`
 }
 
+// Creator holds the user fields returned by the JOIN query (FindByHashWithCreator).
+// Avoids importing auth — the middleware maps this to auth.User.
+type Creator struct {
+	ID              string
+	Name            string
+	Email           string
+	EmailVerifiedAt *time.Time
+	AvatarURL       string
+	Status          string
+	OnboardedAt     *time.Time
+	LastLoginAt     *time.Time
+	Timezone        string
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
 var (
 	ErrNotFound       = errors.New("api key not found")
 	ErrExpired        = errors.New("api key has expired")

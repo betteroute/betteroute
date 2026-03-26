@@ -68,6 +68,51 @@ func (s *Store) FindByHash(ctx context.Context, hash string) (*APIKey, error) {
 	return toAPIKey(row), nil
 }
 
+// FindByHashWithCreator resolves a key hash to its API key and creator in a single round-trip.
+// Returns ErrNotFound if the key doesn't exist or the creator account was deleted.
+func (s *Store) FindByHashWithCreator(ctx context.Context, hash string) (*APIKey, *Creator, error) {
+	row, err := s.q.FindAPIKeyWithCreator(ctx, hash)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("querying api key with creator: %w", err)
+	}
+	return toAPIKeyFromJoin(row), toCreator(row), nil
+}
+
+func toAPIKeyFromJoin(row sqlc.FindAPIKeyWithCreatorRow) *APIKey {
+	return &APIKey{
+		ID:          row.ID,
+		WorkspaceID: row.WorkspaceID,
+		CreatedBy:   ptr.From(row.CreatedBy),
+		Name:        row.Name,
+		KeyPrefix:   row.KeyPrefix,
+		Permission:  Permission(row.Permission),
+		Scopes:      stringsToScopes(row.Scopes),
+		ExpiresAt:   row.ExpiresAt,
+		LastUsedAt:  row.LastUsedAt,
+		CreatedAt:   row.CreatedAt,
+		UpdatedAt:   row.UpdatedAt,
+	}
+}
+
+func toCreator(row sqlc.FindAPIKeyWithCreatorRow) *Creator {
+	return &Creator{
+		ID:              row.UserID,
+		Name:            row.UserName,
+		Email:           row.UserEmail,
+		EmailVerifiedAt: row.EmailVerifiedAt,
+		AvatarURL:       ptr.From(row.UserAvatarUrl),
+		Status:          row.UserStatus,
+		OnboardedAt:     row.OnboardedAt,
+		LastLoginAt:     row.LastLoginAt,
+		Timezone:        row.Timezone,
+		CreatedAt:       row.UserCreatedAt,
+		UpdatedAt:       row.UserUpdatedAt,
+	}
+}
+
 // FindByID retrieves an API key by its ID.
 func (s *Store) FindByID(ctx context.Context, id, workspaceID string) (*APIKey, error) {
 	row, err := s.q.FindAPIKeyByID(ctx, sqlc.FindAPIKeyByIDParams{
