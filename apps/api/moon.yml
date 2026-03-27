@@ -27,6 +27,7 @@ tasks:
     options:
       cache: false
       persistent: true
+      envFile: true
 
   # Build
   build:
@@ -51,50 +52,6 @@ tasks:
     inputs:
       - "@group(sources)"
 
-  # Docs
-  docs:
-    command: "go tool swag init -d . -g cmd/betteroute/main.go -o internal/openapi --parseInternal --outputTypes go"
-    inputs:
-      - "@group(sources)"
-    outputs:
-      - "internal/openapi/docs.go"
-
-  # SQL code generation
-  sqlc:
-    command: "go tool sqlc generate -f sql/sqlc.yaml"
-    options:
-      cache: false
-    inputs:
-      - "@group(schema)"
-      - "@group(queries)"
-      - "sql/sqlc.yaml"
-
-  # Database
-  db-diff:
-    script: "cd sql && atlas migrate diff --env dev"
-    preset: "utility" # Disables caching, enables interactive mode, and streams output.
-    inputs:
-      - "@group(schema)"
-      - "sql/atlas.hcl"
-
-  db-apply:
-    script: "cd sql && atlas migrate apply --env dev"
-    preset: "utility"
-
-  db-status:
-    script: "cd sql && atlas migrate status --env dev"
-    preset: "utility"
-
-  db-hash:
-    script: "cd sql && atlas migrate hash --env dev"
-    preset: "utility"
-    inputs:
-      - "sql/migrations/*"
-
-  db-seed:
-    script: "for f in sql/seeds/*.sql; do psql ${DATABASE_URL} -f \"$f\"; done"
-    preset: "utility"
-
   check:
     deps:
       - "lint"
@@ -105,3 +62,47 @@ tasks:
     options:
       cache: false
 
+  # Code Generation
+  sqlc:
+    command: "go tool sqlc generate -f sql/sqlc.yaml"
+    options:
+      cache: false
+    inputs:
+      - "@group(schema)"
+      - "@group(queries)"
+      - "sql/sqlc.yaml"
+
+  docs:
+    command: "go tool swag init -d . -g cmd/betteroute/main.go -o internal/openapi --parseInternal --outputTypes go"
+    inputs:
+      - "@group(sources)"
+    outputs:
+      - "internal/openapi/docs.go"
+
+  # Database
+  db-migrate:
+    script: "cd sql && atlas migrate diff --env dev"
+    preset: "utility" # Disables caching, enables interactive mode, and streams output.
+    options:
+      envFile: true
+    inputs:
+      - "@group(schema)"
+      - "sql/atlas.hcl"
+
+  db-push:
+    script: "cd sql && atlas migrate apply --env dev"
+    preset: "utility"
+    options:
+      envFile: true
+
+  db-status:
+    script: "cd sql && atlas migrate status --env dev"
+    preset: "utility"
+    options:
+      envFile: true
+
+  db-seed:
+    script: "for f in sql/seeds/*.sql; do psql ${DATABASE_URL} -f \"$f\"; done"
+    preset: "utility"
+    options:
+      envFile: true
