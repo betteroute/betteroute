@@ -148,11 +148,11 @@ func toDomain(row sqlc.Domain) *Domain {
 	return &Domain{
 		ID:                row.ID,
 		WorkspaceID:       row.WorkspaceID,
-		CreatedBy:         ptr.From(row.CreatedBy),
+		CreatedBy:         ptr.Val(row.CreatedBy),
 		Hostname:          row.Hostname,
 		VerificationToken: row.VerificationToken,
 		VerifiedAt:        row.VerifiedAt,
-		FallbackURL:       ptr.From(row.FallbackUrl),
+		FallbackURL:       ptr.Val(row.FallbackUrl),
 		Status:            row.Status,
 		LastCheckedAt:     row.LastCheckedAt,
 		CreatedAt:         row.CreatedAt,

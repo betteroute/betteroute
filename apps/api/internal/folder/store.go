@@ -127,7 +127,7 @@ func toFolder(row sqlc.Folder) *Folder {
 	return &Folder{
 		ID:          row.ID,
 		WorkspaceID: row.WorkspaceID,
-		CreatedBy:   ptr.From(row.CreatedBy),
+		CreatedBy:   ptr.Val(row.CreatedBy),
 		Name:        row.Name,
 		Color:       row.Color,
 		Position:    int(row.Position),

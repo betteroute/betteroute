@@ -214,7 +214,7 @@ func (s *Store) ListMembers(ctx context.Context, workspaceID string) ([]*Member,
 			UserID:    row.UserID,
 			Name:      row.UserName,
 			Email:     row.UserEmail,
-			AvatarURL: ptr.From(row.UserAvatarUrl),
+			AvatarURL: ptr.Val(row.UserAvatarUrl),
 			Role:      rbac.Role(row.Role),
 			JoinedAt:  row.CreatedAt,
 		}

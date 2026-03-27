@@ -85,7 +85,7 @@ func toAPIKeyFromJoin(row sqlc.FindAPIKeyWithCreatorRow) *APIKey {
 	return &APIKey{
 		ID:          row.ID,
 		WorkspaceID: row.WorkspaceID,
-		CreatedBy:   ptr.From(row.CreatedBy),
+		CreatedBy:   ptr.Val(row.CreatedBy),
 		Name:        row.Name,
 		KeyPrefix:   row.KeyPrefix,
 		Permission:  Permission(row.Permission),
@@ -103,7 +103,7 @@ func toCreator(row sqlc.FindAPIKeyWithCreatorRow) *Creator {
 		Name:            row.UserName,
 		Email:           row.UserEmail,
 		EmailVerifiedAt: row.EmailVerifiedAt,
-		AvatarURL:       ptr.From(row.UserAvatarUrl),
+		AvatarURL:       ptr.Val(row.UserAvatarUrl),
 		Status:          row.UserStatus,
 		OnboardedAt:     row.OnboardedAt,
 		LastLoginAt:     row.LastLoginAt,
@@ -169,7 +169,7 @@ func toAPIKey(row sqlc.ApiKey) *APIKey {
 	return &APIKey{
 		ID:          row.ID,
 		WorkspaceID: row.WorkspaceID,
-		CreatedBy:   ptr.From(row.CreatedBy),
+		CreatedBy:   ptr.Val(row.CreatedBy),
 		Name:        row.Name,
 		KeyPrefix:   row.KeyPrefix,
 		Permission:  Permission(row.Permission),

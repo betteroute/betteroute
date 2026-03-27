@@ -1,8 +1,10 @@
 // Package ptr provides generic pointer utilities for nullable database fields.
 package ptr
 
-// From dereferences a pointer, returning the zero value if nil.
-func From[T any](p *T) T {
+import "math"
+
+// Val dereferences a pointer, returning the zero value if nil.
+func Val[T any](p *T) T {
 	if p == nil {
 		var zero T
 		return zero
@@ -23,11 +25,11 @@ func ToNonZero[T comparable](v T) *T {
 // ToInt32 safely converts an int to an int32, clamping if it overflows.
 // Useful for dealing with sqlc-generated types without triggering gosec G115.
 func ToInt32(v int) int32 {
-	if v > 2147483647 { // math.MaxInt32
-		return 2147483647
+	if v > math.MaxInt32 {
+		return math.MaxInt32
 	}
-	if v < -2147483648 { // math.MinInt32
-		return -2147483648
+	if v < math.MinInt32 {
+		return math.MinInt32
 	}
 	return int32(v)
 }

@@ -168,7 +168,7 @@ func toTag(row sqlc.Tag) *Tag {
 	return &Tag{
 		ID:          row.ID,
 		WorkspaceID: row.WorkspaceID,
-		CreatedBy:   ptr.From(row.CreatedBy),
+		CreatedBy:   ptr.Val(row.CreatedBy),
 		Name:        row.Name,
 		Color:       row.Color,
 		CreatedAt:   row.CreatedAt,
