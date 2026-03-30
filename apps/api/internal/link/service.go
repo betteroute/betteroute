@@ -9,6 +9,7 @@ import (
 	"github.com/rs/xid"
 
 	"github.com/execrc/betteroute/internal/deeplink"
+	"github.com/execrc/betteroute/internal/usage"
 )
 
 // primaryDomain is the default domain for short links.
@@ -19,11 +20,12 @@ var primaryDomain = "http://localhost:8080"
 type Service struct {
 	store  *Store
 	appSvc *deeplink.Service
+	meter  *usage.Meter
 }
 
 // NewService creates a new link service.
-func NewService(store *Store, appSvc *deeplink.Service) *Service {
-	return &Service{store: store, appSvc: appSvc}
+func NewService(store *Store, appSvc *deeplink.Service, meter *usage.Meter) *Service {
+	return &Service{store: store, appSvc: appSvc, meter: meter}
 }
 
 // Create generates a short code and persists a new link.
@@ -81,7 +83,7 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia st
 				l.ShortCode = code
 				created, err = s.store.Insert(ctx, l)
 				if err == nil {
-					s.detectAndSaveDeepLinks(ctx, created, input.WorkspaceAppID)
+					s.trackLinkCreated(ctx, created, input.WorkspaceAppID)
 					return s.enrichShortURL(created), nil
 				}
 				if !errors.Is(err, ErrShortCodeTaken) {
@@ -92,7 +94,7 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID, createdVia st
 		return nil, err
 	}
 
-	s.detectAndSaveDeepLinks(ctx, created, input.WorkspaceAppID)
+	s.trackLinkCreated(ctx, created, input.WorkspaceAppID)
 	return s.enrichShortURL(created), nil
 }
 
@@ -129,7 +131,15 @@ func (s *Service) Update(ctx context.Context, id, workspaceID string, input Upda
 
 // Delete soft-deletes a link.
 func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
-	return s.store.SoftDelete(ctx, id, workspaceID)
+	if err := s.store.SoftDelete(ctx, id, workspaceID); err != nil {
+		return err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Links, -1); err != nil {
+		slog.WarnContext(ctx, "adjusting link usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return nil
 }
 
 // enrichShortURL computes the full short URL for a link.
@@ -137,6 +147,14 @@ func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
 func (s *Service) enrichShortURL(l *Link) *Link {
 	l.ShortURL = primaryDomain + "/" + l.ShortCode
 	return l
+}
+
+// trackLinkCreated handles post-creation side effects: usage tracking and deep link detection.
+func (s *Service) trackLinkCreated(ctx context.Context, l *Link, workspaceAppID string) {
+	if err := s.meter.Adjust(ctx, l.WorkspaceID, usage.Links, 1); err != nil {
+		slog.WarnContext(ctx, "adjusting link usage", "error", err, "workspace_id", l.WorkspaceID)
+	}
+	s.detectAndSaveDeepLinks(ctx, l, workspaceAppID)
 }
 
 // detectAndSaveDeepLinks auto-detects a platform app from the destination URL

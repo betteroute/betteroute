@@ -60,11 +60,12 @@ type Link struct {
 // CreateInput is the input for creating a new link.
 // WorkspaceID is securely injected by middleware.
 type CreateInput struct {
-	FolderID    string `json:"folder_id"    validate:"omitempty"`
-	DestURL     string `json:"dest_url"     validate:"required,url,max=2048"`
-	ShortCode   string `json:"short_code"   validate:"omitempty,min=1,max=50,shortcode"`
-	Title       string `json:"title"        validate:"omitempty,max=200"`
-	Description string `json:"description"  validate:"omitempty,max=500"`
+	FolderID       string `json:"folder_id"        validate:"omitempty"`
+	WorkspaceAppID string `json:"workspace_app_id" validate:"omitempty"`
+	DestURL        string `json:"dest_url"         validate:"required,url,max=2048"`
+	ShortCode      string `json:"short_code"       validate:"omitempty,min=1,max=50,shortcode"`
+	Title          string `json:"title"        validate:"omitempty,max=200"`
+	Description    string `json:"description"  validate:"omitempty,max=500"`
 
 	// Scheduling
 	StartsAt      *time.Time `json:"starts_at"       validate:"omitempty"`
@@ -93,11 +94,12 @@ type CreateInput struct {
 // UpdateInput is the input for partially updating a link.
 // Fields use opt.Field to track presence for PATCH semantics.
 type UpdateInput struct {
-	FolderID    opt.Field[*string] `json:"folder_id" swaggertype:"string"`
-	DestURL     opt.Field[*string] `json:"dest_url"     validate:"omitempty,url,max=2048" swaggertype:"string"`
-	Title       opt.Field[*string] `json:"title"        validate:"omitempty,max=200" swaggertype:"string"`
-	Description opt.Field[*string] `json:"description"  validate:"omitempty,max=500" swaggertype:"string"`
-	IsActive    opt.Field[*bool]   `json:"is_active" swaggertype:"boolean"`
+	FolderID       opt.Field[*string] `json:"folder_id"        swaggertype:"string"`
+	WorkspaceAppID opt.Field[*string] `json:"workspace_app_id" swaggertype:"string"`
+	DestURL        opt.Field[*string] `json:"dest_url"         validate:"omitempty,url,max=2048" swaggertype:"string"`
+	Title          opt.Field[*string] `json:"title"            validate:"omitempty,max=200" swaggertype:"string"`
+	Description    opt.Field[*string] `json:"description"  validate:"omitempty,max=500" swaggertype:"string"`
+	IsActive       opt.Field[*bool]   `json:"is_active" swaggertype:"boolean"`
 
 	// Scheduling
 	StartsAt      opt.Field[*time.Time] `json:"starts_at" swaggertype:"string"`
