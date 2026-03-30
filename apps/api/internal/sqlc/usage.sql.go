@@ -9,6 +9,46 @@ import (
 	"context"
 )
 
+const adjustResource = `-- name: AdjustResource :exec
+UPDATE workspace_usage SET
+    domains_active  = CASE WHEN $2::BOOLEAN  THEN domains_active  + $3::INT ELSE domains_active  END,
+    webhooks_active = CASE WHEN $4::BOOLEAN THEN webhooks_active + $3::INT ELSE webhooks_active END,
+    api_keys_active = CASE WHEN $5::BOOLEAN THEN api_keys_active + $3::INT ELSE api_keys_active END,
+    members_active  = CASE WHEN $6::BOOLEAN  THEN members_active  + $3::INT ELSE members_active  END,
+    folders_active  = CASE WHEN $7::BOOLEAN  THEN folders_active  + $3::INT ELSE folders_active  END,
+    tags_active     = CASE WHEN $8::BOOLEAN     THEN tags_active     + $3::INT ELSE tags_active     END,
+    updated_at = NOW()
+WHERE workspace_id = $1
+  AND EXISTS (SELECT 1 FROM workspaces WHERE id = $1 AND deleted_at IS NULL)
+`
+
+type AdjustResourceParams struct {
+	WorkspaceID string `json:"workspace_id"`
+	IsDomains   bool   `json:"is_domains"`
+	Delta       int32  `json:"delta"`
+	IsWebhooks  bool   `json:"is_webhooks"`
+	IsApiKeys   bool   `json:"is_api_keys"`
+	IsMembers   bool   `json:"is_members"`
+	IsFolders   bool   `json:"is_folders"`
+	IsTags      bool   `json:"is_tags"`
+}
+
+// Adjusts a single allocated resource counter.
+// delta is +1 on create, -1 on delete. CHECK constraints prevent negatives.
+func (q *Queries) AdjustResource(ctx context.Context, arg AdjustResourceParams) error {
+	_, err := q.db.Exec(ctx, adjustResource,
+		arg.WorkspaceID,
+		arg.IsDomains,
+		arg.Delta,
+		arg.IsWebhooks,
+		arg.IsApiKeys,
+		arg.IsMembers,
+		arg.IsFolders,
+		arg.IsTags,
+	)
+	return err
+}
+
 const incrementUsage = `-- name: IncrementUsage :execrows
 UPDATE workspace_usage SET
     links_usage = CASE WHEN $2::BOOLEAN THEN links_usage + $3::INT ELSE links_usage END,
@@ -43,14 +83,17 @@ const rolloverUsageCycle = `-- name: RolloverUsageCycle :execrows
 UPDATE workspace_usage SET
     links_usage = 0,
     clicks_usage = 0,
-    usage_period_start = usage_period_end,
-    usage_period_end = usage_period_end + interval '1 month',
+    usage_period_start = NOW(),
+    usage_period_end = NOW() + interval '1 month',
     updated_at = NOW()
 WHERE workspace_id = $1 AND usage_period_end <= NOW()
 `
 
-// Resets consumable counters natively when the exact billing anniversary period has expired.
-// No-op if the cycle is still active (idempotent).
+// Resets consumable counters when the billing cycle has expired.
+// Catches up in one shot regardless of how many months have elapsed.
+// No-op if the cycle is still active (idempotent). Does NOT touch allocated counters.
+// The Polar webhook sets the authoritative boundaries via ForceResetWorkspaceUsage;
+// this is the safety net for when the webhook doesn't fire.
 func (q *Queries) RolloverUsageCycle(ctx context.Context, workspaceID string) (int64, error) {
 	result, err := q.db.Exec(ctx, rolloverUsageCycle, workspaceID)
 	if err != nil {
