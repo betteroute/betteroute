@@ -2,8 +2,11 @@ package folder
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/rs/xid"
+
+	"github.com/execrc/betteroute/internal/usage"
 )
 
 const defaultColor = "#6366f1"
@@ -11,11 +14,12 @@ const defaultColor = "#6366f1"
 // Service implements folder business logic.
 type Service struct {
 	store *Store
+	meter *usage.Meter
 }
 
 // NewService creates a new folder service.
-func NewService(store *Store) *Service {
-	return &Service{store: store}
+func NewService(store *Store, meter *usage.Meter) *Service {
+	return &Service{store: store, meter: meter}
 }
 
 // Create persists a new folder.
@@ -33,7 +37,16 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID string, input 
 		Color:       color,
 	}
 
-	return s.store.Insert(ctx, f)
+	created, err := s.store.Insert(ctx, f)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Folders, 1); err != nil {
+		slog.WarnContext(ctx, "adjusting folder usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return created, nil
 }
 
 // Get retrieves a folder by ID within a workspace.
@@ -53,5 +66,13 @@ func (s *Service) Update(ctx context.Context, id, workspaceID string, input Upda
 
 // Delete soft-deletes a folder.
 func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
-	return s.store.SoftDelete(ctx, id, workspaceID)
+	if err := s.store.SoftDelete(ctx, id, workspaceID); err != nil {
+		return err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Folders, -1); err != nil {
+		slog.WarnContext(ctx, "adjusting folder usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return nil
 }
