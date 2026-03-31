@@ -3,22 +3,26 @@ package domain
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"strings"
 	"time"
 
 	"github.com/rs/xid"
+
+	"github.com/execrc/betteroute/internal/usage"
 )
 
 // Service implements domain business logic.
 type Service struct {
 	store     *Store
 	txtPrefix string
+	meter     *usage.Meter
 }
 
 // NewService creates a new domain service.
-func NewService(store *Store, txtPrefix string) *Service {
-	return &Service{store: store, txtPrefix: txtPrefix}
+func NewService(store *Store, txtPrefix string, meter *usage.Meter) *Service {
+	return &Service{store: store, txtPrefix: txtPrefix, meter: meter}
 }
 
 // Create generates a verification token and persists a new domain.
@@ -39,7 +43,16 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID string, input 
 		FallbackURL:       input.FallbackURL,
 	}
 
-	return s.store.Insert(ctx, d)
+	created, err := s.store.Insert(ctx, d)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Domains, 1); err != nil {
+		slog.WarnContext(ctx, "adjusting domain usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return created, nil
 }
 
 // Get retrieves a domain by ID within a workspace.
@@ -59,7 +72,15 @@ func (s *Service) Update(ctx context.Context, id, workspaceID string, input Upda
 
 // Delete soft-deletes a domain.
 func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
-	return s.store.SoftDelete(ctx, id, workspaceID)
+	if err := s.store.SoftDelete(ctx, id, workspaceID); err != nil {
+		return err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Domains, -1); err != nil {
+		slog.WarnContext(ctx, "adjusting domain usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return nil
 }
 
 // FindByHostname retrieves a domain by its hostname (used by internal endpoints).
