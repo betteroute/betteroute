@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}}</title>
+    {{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">{{end}}
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 24px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 32px 24px;
+            max-width: 380px;
+            width: 100%;
+            text-align: center;
+            /* Hidden initially — revealed by JS after auto-attempt fails. */
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .icon {
+            width: 64px;
+            height: 64px;
+            border-radius: 14px;
+            margin: 0 auto 16px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+        }
+        .icon img { width: 100%; height: 100%; border-radius: 14px; object-fit: cover; }
+        h1 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+        .desc { font-size: 14px; color: #6b7280; margin-bottom: 24px; line-height: 1.5; }
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn + .btn { margin-top: 10px; }
+        .btn-primary { background: #111827; color: #fff; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+    </style>
+</head>
+<body>
+    <div id="card" class="card">
+        <div class="icon">
+            {{if .OGImage}}<img src="{{.OGImage}}" alt="">{{else}}🔗{{end}}
+        </div>
+        <h1>{{.Title}}</h1>
+        <p class="desc">{{.Description}}</p>
+        <a id="open-btn" class="btn btn-primary" href="#">Open in App</a>
+        <a class="btn btn-secondary" href="{{.DestURL}}">Continue in Browser</a>
+    </div>
+
+    <div id="dl-config" data-config="{{.ConfigJSON}}" hidden></div>
+    <script>
+    (function() {
+        var cfg = JSON.parse(document.getElementById("dl-config").dataset.config);
+        var card = document.getElementById("card");
+        var openBtn = document.getElementById("open-btn");
+
+        // Build intent:// URL for Android in-app browsers.
+        function intentURL() {
+            if (!cfg.androidDeepLink) return "";
+            try {
+                var i = cfg.androidDeepLink.indexOf("://");
+                var scheme = cfg.androidDeepLink.substring(0, i);
+                var path = cfg.androidDeepLink.substring(i + 3);
+                var url = "intent://" + path + "#Intent;scheme=" + scheme + ";";
+                if (cfg.androidPackage) url += "package=" + cfg.androidPackage + ";";
+                url += "S.browser_fallback_url=" + encodeURIComponent(cfg.androidFallback || cfg.destURL) + ";end";
+                return url;
+            } catch(e) {
+                return "";
+            }
+        }
+
+        function showCard() {
+            card.classList.add("visible");
+        }
+
+        function openApp(goToStoreOnFail) {
+            if (cfg.os === "android") {
+                // intent:// handles its own fallback via S.browser_fallback_url.
+                var url = intentURL();
+                if (url) {
+                    window.location.href = url;
+                } else if (cfg.androidDeepLink) {
+                    window.location.href = cfg.androidDeepLink;
+                }
+                // Show card after a delay — if the app opened, user is already gone.
+                setTimeout(showCard, 1500);
+                return;
+            }
+
+            if (cfg.os === "ios") {
+                if (!cfg.iosDeepLink) { showCard(); return; }
+
+                var hidden = false;
+                function onVis() { if (document.hidden) hidden = true; }
+                document.addEventListener("visibilitychange", onVis);
+
+                window.location.href = cfg.iosDeepLink;
+
+                setTimeout(function() {
+                    document.removeEventListener("visibilitychange", onVis);
+                    if (hidden) return; // app opened — do nothing
+
+                    if (goToStoreOnFail && cfg.iosFallback) {
+                        // User explicitly tapped "Open in App" but app isn't installed.
+                        window.location.href = cfg.iosFallback;
+                    } else {
+                        // Auto-attempt failed — just show the card.
+                        showCard();
+                    }
+                }, 1500);
+                return;
+            }
+
+            // Shouldn't reach here (desktop never gets deepview).
+            window.location.href = cfg.destURL;
+        }
+
+        openBtn.addEventListener("click", function(e) {
+            e.preventDefault();
+            openApp(true);
+        });
+
+        // Auto-attempt: try opening the app immediately on page load.
+        // If it works, the user is gone and never sees this page.
+        // If it fails, the card fades in with manual buttons.
+        openApp(false);
+    })();
+    </script>
+</body>
+</html>
