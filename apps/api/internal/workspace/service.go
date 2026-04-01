@@ -10,6 +10,7 @@ import (
 	"github.com/execrc/betteroute/internal/entitlement"
 	"github.com/execrc/betteroute/internal/notify"
 	"github.com/execrc/betteroute/internal/rbac"
+	"github.com/execrc/betteroute/internal/usage"
 )
 
 const invitationTTL = 7 * 24 * time.Hour
@@ -25,11 +26,12 @@ type Service struct {
 	notifier notify.TeamNotifier
 	webURL   string
 	billing  BillingProvisioner
+	meter    *usage.Meter
 }
 
 // NewService creates a new workspace service.
-func NewService(store *Store, notifier notify.TeamNotifier, webURL string, billing BillingProvisioner) *Service {
-	return &Service{store: store, notifier: notifier, webURL: webURL, billing: billing}
+func NewService(store *Store, notifier notify.TeamNotifier, webURL string, billing BillingProvisioner, meter *usage.Meter) *Service {
+	return &Service{store: store, notifier: notifier, webURL: webURL, billing: billing, meter: meter}
 }
 
 // ResolveAccess looks up a workspace by slug and verifies the user is a member.
@@ -73,6 +75,11 @@ func (s *Service) Create(ctx context.Context, userID string, input CreateInput) 
 		if err = s.billing.Provision(ctx, ws.ID); err != nil {
 			slog.WarnContext(ctx, "seeding billing state", "error", err, "workspace_id", ws.ID)
 		}
+	}
+
+	// Owner counts as the first member.
+	if err := s.meter.Adjust(ctx, ws.ID, usage.Members, 1); err != nil {
+		slog.WarnContext(ctx, "adjusting member usage", "error", err, "workspace_id", ws.ID)
 	}
 
 	return ws, nil
@@ -172,7 +179,15 @@ func (s *Service) RemoveMember(ctx context.Context, workspaceID, targetUserID st
 		}
 	}
 
-	return s.store.DeleteMember(ctx, workspaceID, targetUserID)
+	if err := s.store.DeleteMember(ctx, workspaceID, targetUserID); err != nil {
+		return err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.Members, -1); err != nil {
+		slog.WarnContext(ctx, "adjusting member usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return nil
 }
 
 // Invite creates a pending invitation and sends the invite email.
@@ -228,6 +243,10 @@ func (s *Service) AcceptInvitation(ctx context.Context, userID, userEmail string
 
 	if err = s.store.InsertMember(ctx, inv.WorkspaceID, userID, inv.Role, inv.InvitedBy); err != nil {
 		return nil, err
+	}
+
+	if mErr := s.meter.Adjust(ctx, inv.WorkspaceID, usage.Members, 1); mErr != nil {
+		slog.WarnContext(ctx, "adjusting member usage", "error", mErr, "workspace_id", inv.WorkspaceID)
 	}
 
 	if err = s.store.AcceptInvitation(ctx, inv.ID); err != nil {
