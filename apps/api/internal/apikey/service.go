@@ -2,21 +2,24 @@ package apikey
 
 import (
 	"context"
+	"log/slog"
 	"time"
 
 	"github.com/rs/xid"
 
 	"github.com/execrc/betteroute/internal/ptr"
+	"github.com/execrc/betteroute/internal/usage"
 )
 
 // Service implements API key business logic.
 type Service struct {
 	store *Store
+	meter *usage.Meter
 }
 
 // NewService creates a new API key service.
-func NewService(store *Store) *Service {
-	return &Service{store: store}
+func NewService(store *Store, meter *usage.Meter) *Service {
+	return &Service{store: store, meter: meter}
 }
 
 // Created is returned once on key creation — includes the plain key
@@ -57,6 +60,10 @@ func (s *Service) Create(ctx context.Context, workspaceID, userID string, input 
 	})
 	if err != nil {
 		return nil, err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.APIKeys, 1); err != nil {
+		slog.WarnContext(ctx, "adjusting api key usage", "error", err, "workspace_id", workspaceID)
 	}
 
 	return &Created{APIKey: *key, PlainKey: plain}, nil
@@ -117,7 +124,15 @@ func (s *Service) List(ctx context.Context, workspaceID string) ([]APIKey, error
 
 // Delete soft-deletes an API key.
 func (s *Service) Delete(ctx context.Context, id, workspaceID string) error {
-	return s.store.SoftDelete(ctx, id, workspaceID)
+	if err := s.store.SoftDelete(ctx, id, workspaceID); err != nil {
+		return err
+	}
+
+	if err := s.meter.Adjust(ctx, workspaceID, usage.APIKeys, -1); err != nil {
+		slog.WarnContext(ctx, "adjusting api key usage", "error", err, "workspace_id", workspaceID)
+	}
+
+	return nil
 }
 
 func validateCreateInput(input CreateInput) error {
