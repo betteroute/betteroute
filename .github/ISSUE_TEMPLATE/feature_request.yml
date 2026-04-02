@@ -2,11 +2,6 @@ name: Feature Request
 description: Suggest a new feature or improvement
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        We appreciate feature requests — they help shape the roadmap. Please describe what you need and why.
-
   - type: textarea
     id: problem
     attributes:
@@ -40,6 +35,7 @@ body:
         - Dashboard (frontend)
         - Redirect engine
         - Deep linking
+        - Analytics
         - Self-hosting / deployment
         - Other
     validations:

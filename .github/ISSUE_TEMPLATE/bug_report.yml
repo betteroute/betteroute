@@ -2,11 +2,6 @@ name: Bug Report
 description: Report something that isn't working correctly
 labels: ["bug"]
 body:
-  - type: markdown
-    attributes:
-      value: |
-        Thank you for reporting this. Please fill in as much detail as you can — it helps us fix things faster.
-
   - type: textarea
     id: description
     attributes:
@@ -47,6 +42,13 @@ body:
       required: true
 
   - type: input
+    id: version
+    attributes:
+      label: Version or commit SHA
+      description: Run `git rev-parse --short HEAD` if self-hosted.
+      placeholder: abc1234
+
+  - type: input
     id: environment
     attributes:
       label: Environment
@@ -57,7 +59,7 @@ body:
     id: logs
     attributes:
       label: Relevant logs or screenshots
-      description: Paste any error messages, stack traces, or screenshots that help illustrate the issue.
+      description: Error messages, stack traces, or screenshots.
 
   - type: dropdown
     id: area
@@ -69,6 +71,7 @@ body:
         - Dashboard (frontend)
         - Redirect engine
         - Deep linking
+        - Analytics
         - Self-hosting / deployment
         - Other
     validations:

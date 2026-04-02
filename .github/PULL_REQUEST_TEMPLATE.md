@@ -1,6 +1,6 @@
 ## What does this PR do?
 
-<!-- A brief description of the change and why it's needed. Link related issues: Closes #123 -->
+<!-- What changed and why. Use "Closes #123" or "Fixes #456" to auto-close linked issues. -->
 
 ## How was it tested?
 

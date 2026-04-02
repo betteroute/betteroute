@@ -1,35 +1,29 @@
 # Code of Conduct
 
-## Our Commitment
+Be respectful. Assume good intent. Focus on the work.
 
-Betteroute welcomes everyone — regardless of experience level, background, or identity. We are committed to maintaining a respectful, harassment-free environment for all participants.
+## Expected
 
-## Expected Behavior
+- Constructive discussions, reviews, and comments
+- Ask before assuming
+- Feedback on the work, not the person
+- Respect for different approaches
 
-- Be respectful and constructive in discussions, reviews, and issue comments
-- Assume good intent — ask for clarification before reacting
-- Give and receive feedback gracefully
-- Focus on the work, not the person
-- Respect differing viewpoints and approaches
+## Not acceptable
 
-## Unacceptable Behavior
-
-- Personal attacks, insults, or derogatory language
-- Harassment of any kind, public or private
-- Publishing others' private information without consent
-- Trolling, derailing discussions, or sustained disruption
-- Any conduct that would be inappropriate in a professional setting
+- Personal attacks, insults, derogatory language
+- Harassment, public or private
+- Publishing someone's private information without consent
+- Trolling or sustained disruption
 
 ## Enforcement
 
-Maintainers are responsible for enforcing this code of conduct. Report unacceptable behavior by [opening a private discussion](https://github.com/betteroute/betteroute/discussions) with a maintainer. All reports are reviewed and handled confidentially.
-
-Violations may result in comment removal, issue closure, or temporary/permanent bans at maintainer discretion.
+Report issues to a maintainer directly or via [private discussion](https://github.com/betteroute/betteroute/discussions). Reports are handled confidentially. Violations may result in comment removal, issue closure, or bans.
 
 ## Scope
 
-This applies to all project spaces: GitHub issues, pull requests, discussions, and any channel where you represent or participate in the Betteroute community.
+All project spaces: issues, PRs, discussions, and anywhere you're participating in the Betteroute community.
 
-## Attribution
+---
 
-This Code of Conduct is adapted from the [Contributor Covenant](https://www.contributor-covenant.org), version 2.1.
+Adapted from [Contributor Covenant 2.1](https://www.contributor-covenant.org).
