@@ -33,7 +33,7 @@ We acknowledge reports within **48 hours** and target a fix within **7 days** de
 - Don't exploit beyond what's needed to demonstrate the issue
 - Don't disclose publicly before a fix ships
 
-## What we guarantee
+## What We Guarantee
 
 - 48-hour response
 - No legal action if you follow the above

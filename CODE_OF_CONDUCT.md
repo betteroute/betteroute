@@ -9,7 +9,7 @@ Be respectful. Assume good intent. Focus on the work.
 - Feedback on the work, not the person
 - Respect for different approaches
 
-## Not acceptable
+## Not Acceptable
 
 - Personal attacks, insults, derogatory language
 - Harassment, public or private
@@ -18,7 +18,7 @@ Be respectful. Assume good intent. Focus on the work.
 
 ## Enforcement
 
-Report issues to a maintainer directly or via [private discussion](https://github.com/betteroute/betteroute/discussions). Reports are handled confidentially. Violations may result in comment removal, issue closure, or bans.
+Report issues to a maintainer directly. Reports are handled confidentially. Violations may result in comment removal, issue closure, or bans.
 
 ## Scope
 
